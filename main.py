@@ -403,128 +403,107 @@ async def dashboard(request: Request) -> HTMLResponse:
 
 
 # ========== 前端页面 ==========
-DASHBOARD_HTML = """<!DOCTYPE html>
+DASHBOARD_HTML = r"""<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>小萤的屏幕时间</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0a0a0f;
-    color: #e0dfe4;
-    min-height: 100vh;
-    padding: 20px;
-  }
-  .header {
-    text-align: center;
-    padding: 30px 0 20px;
-  }
-  .header h1 {
-    font-size: 1.6em;
-    background: linear-gradient(135deg, #c8a2c8, #f4a0a0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 6px;
-  }
-  .header .subtitle { color: #666; font-size: 0.85em; }
-  .header .total-time {
-    margin-top: 16px; font-size: 2.4em;
-    font-weight: 700; color: #f4a0a0;
-  }
-  .header .total-label { color: #666; font-size: 0.8em; margin-top: 4px; }
-  .night-owl-banner {
-    max-width: 500px; margin: 0 auto 16px;
-    padding: 12px 16px; border-radius: 12px;
-    background: #2a1520; border: 1px solid #f4a0a044;
-    text-align: center; display: none;
-  }
-  .night-owl-banner.show { display: block; }
-  .night-owl-banner .emoji { font-size: 1.4em; }
-  .night-owl-banner .text { color: #f4a0a0; font-size: 0.85em; margin-top: 4px; }
-  .current-activity {
-    max-width: 500px; margin: 0 auto 16px;
-    padding: 12px 16px; border-radius: 12px;
-    background: #0f1a15; border: 1px solid #4ecca344;
-    display: none;
-  }
-  .current-activity.show { display: block; }
-  .current-activity .label { color: #4ecca3; font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; }
-  .current-activity .app-name { font-size: 1.1em; font-weight: 600; margin-top: 4px; }
-  .current-activity .duration { color: #4ecca3; font-size: 0.85em; margin-top: 2px; }
-  .app-list { max-width: 500px; margin: 24px auto; }
-  .app-card {
-    background: #15151f; border-radius: 14px;
-    padding: 16px 18px; margin-bottom: 10px;
-    display: flex; align-items: center; justify-content: space-between;
-    border: 1px solid #1e1e2e; transition: all 0.2s;
-  }
-  .app-card:hover { border-color: #2a2a3e; background: #1a1a28; }
-  .app-card.active { border-color: #4ecca344; box-shadow: 0 0 12px #4ecca315; }
-  .app-info { display: flex; align-items: center; gap: 12px; }
-  .app-icon {
-    width: 38px; height: 38px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.2em; background: #1e1e2e;
-  }
-  .app-name-text { font-size: 0.95em; font-weight: 500; }
-  .app-opens { font-size: 0.75em; color: #555; margin-top: 2px; }
-  .app-status {
-    font-size: 0.7em; padding: 3px 8px; border-radius: 20px;
-    background: #0f1a15; color: #4ecca3; margin-left: 8px;
-  }
-  .app-status.closed { background: #1e1e2e; color: #555; }
-  .app-right { display: flex; align-items: center; gap: 12px; }
-  .app-time { text-align: right; }
-  .app-minutes { font-size: 1.15em; font-weight: 600; color: #c8a2c8; }
-  .app-unit { font-size: 0.7em; color: #555; }
-  .app-actions { display: flex; flex-direction: column; gap: 4px; }
-  .app-btn {
-    padding: 4px 10px; border-radius: 8px; border: 1px solid #2a2a3e;
-    background: #15151f; color: #666; font-size: 0.65em; cursor: pointer;
-    transition: all 0.2s; white-space: nowrap;
-  }
-  .app-btn:hover { border-color: #c8a2c8; color: #c8a2c8; }
-  .app-btn.force-close { border-color: #f4a0a033; }
-  .app-btn.force-close:hover { border-color: #f4a0a0; color: #f4a0a0; }
-  .app-btn.force-open { border-color: #4ecca333; }
-  .app-btn.force-open:hover { border-color: #4ecca3; color: #4ecca3; }
-  .bar-bg { width: 100%; height: 3px; background: #1e1e2e; border-radius: 2px; margin-top: 8px; }
-  .bar-fill {
-    height: 100%; border-radius: 2px;
-    background: linear-gradient(90deg, #c8a2c8, #f4a0a0);
-    transition: width 0.5s;
-  }
-  .bar-fill.active { background: linear-gradient(90deg, #4ecca3, #4ecca388); }
-  .controls {
-    max-width: 500px; margin: 20px auto;
-    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-  }
-  .btn {
-    padding: 8px 16px; border-radius: 10px;
-    border: 1px solid #2a2a3e; background: #15151f;
-    color: #888; font-size: 0.8em; cursor: pointer; transition: all 0.2s;
-  }
-  .btn:hover { border-color: #c8a2c8; color: #c8a2c8; }
-  .btn.danger:hover { border-color: #f4a0a0; color: #f4a0a0; }
-  .footer {
-    text-align: center; color: #333; font-size: 0.75em;
-    margin-top: 30px; padding-bottom: 20px;
-  }
-  @media (max-width: 600px) {
-    body { padding: 12px; }
-    .header h1 { font-size: 1.3em; }
-    .header .total-time { font-size: 2em; }
-  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0a0a0f; color:#e0dfe4; min-height:100vh; padding:16px; }
+  .container { max-width:520px; margin:0 auto; }
+
+  /* Header */
+  .header { text-align:center; padding:24px 0 16px; }
+  .header h1 { font-size:1.5em; background:linear-gradient(135deg,#c8a2c8,#f4a0a0); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:4px; }
+  .subtitle { color:#555; font-size:0.8em; }
+  .total-time { margin-top:12px; font-size:2.6em; font-weight:700; color:#f4a0a0; animation:pulse 2s ease-in-out infinite; }
+  .total-label { color:#555; font-size:0.75em; margin-top:2px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.85} }
+  @keyframes glow { 0%,100%{box-shadow:0 0 8px #4ecca322} 50%{box-shadow:0 0 20px #4ecca344} }
+  @keyframes owlBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Night Owl Banner */
+  .night-owl { padding:14px; border-radius:14px; background:linear-gradient(135deg,#2a1520,#1a0f18); border:1px solid #f4a0a033; text-align:center; display:none; margin-bottom:12px; }
+  .night-owl.show { display:block; animation:slideIn 0.4s ease; }
+  .night-owl .owl-emoji { font-size:1.6em; animation:owlBounce 1.5s ease-in-out infinite; display:inline-block; }
+  .night-owl .owl-text { color:#f4a0a0; font-size:0.82em; margin-top:6px; }
+
+  /* Current Activity */
+  .current { padding:14px 16px; border-radius:14px; background:linear-gradient(135deg,#0f1a15,#0a1510); border:1px solid #4ecca333; display:none; margin-bottom:12px; animation:glow 3s ease-in-out infinite; }
+  .current.show { display:block; }
+  .current .c-label { color:#4ecca3; font-size:0.7em; text-transform:uppercase; letter-spacing:1.5px; }
+  .current .c-apps { font-size:1.05em; font-weight:600; margin-top:4px; }
+  .current .c-dur { color:#4ecca3; font-size:0.8em; margin-top:3px; }
+
+  /* Stats Cards */
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .stat-card { background:#15151f; border-radius:12px; padding:14px; border:1px solid #1e1e2e; text-align:center; transition:all 0.3s; }
+  .stat-card:hover { border-color:#c8a2c833; transform:translateY(-2px); }
+  .stat-card .s-value { font-size:1.4em; font-weight:700; color:#c8a2c8; }
+  .stat-card .s-label { font-size:0.7em; color:#555; margin-top:3px; }
+  .stat-card .s-icon { font-size:1.2em; margin-bottom:4px; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:6px; margin-bottom:14px; }
+  .tab { flex:1; padding:9px; background:#15151f; border:1px solid #1e1e2e; border-radius:10px; color:#666; cursor:pointer; font-size:0.78em; text-align:center; transition:all 0.2s; }
+  .tab.active { background:#c8a2c822; border-color:#c8a2c844; color:#c8a2c8; }
+
+  /* Weekly Chart */
+  .weekly-chart { background:#15151f; border-radius:14px; padding:16px; border:1px solid #1e1e2e; margin-bottom:14px; display:none; }
+  .weekly-chart.show { display:block; animation:slideIn 0.3s ease; }
+  .weekly-chart h3 { font-size:0.85em; color:#888; margin-bottom:14px; text-align:center; }
+  .week-bars { display:flex; align-items:flex-end; justify-content:space-around; height:130px; gap:6px; }
+  .week-bar-wrap { display:flex; flex-direction:column; align-items:center; flex:1; height:100%; justify-content:flex-end; }
+  .week-bar { width:100%; border-radius:6px 6px 0 0; background:linear-gradient(180deg,#c8a2c8,#c8a2c855); min-height:4px; transition:height 0.6s ease; position:relative; }
+  .week-bar.today { background:linear-gradient(180deg,#f4a0a0,#f4a0a055); }
+  .week-bar-label { font-size:0.65em; color:#555; margin-top:6px; }
+  .week-bar-val { font-size:0.6em; color:#888; margin-bottom:4px; }
+
+  /* App List */
+  .app-card { background:#15151f; border-radius:14px; padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; border:1px solid #1e1e2e; transition:all 0.25s; animation:slideIn 0.3s ease; }
+  .app-card:hover { border-color:#2a2a3e; background:#1a1a28; transform:translateX(2px); }
+  .app-card.active { border-color:#4ecca333; box-shadow:0 0 12px #4ecca310; }
+  .app-info { display:flex; align-items:center; gap:11px; flex:1; min-width:0; }
+  .app-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.15em; background:#1e1e2e; flex-shrink:0; }
+  .app-detail { min-width:0; flex:1; }
+  .app-name-text { font-size:0.9em; font-weight:500; }
+  .app-opens { font-size:0.72em; color:#555; margin-top:2px; }
+  .app-status { font-size:0.65em; padding:2px 7px; border-radius:20px; background:#0f1a15; color:#4ecca3; margin-left:6px; }
+  .app-status.closed { background:#1e1e2e; color:#444; }
+  .bar-bg { height:3px; background:#1e1e2e; border-radius:2px; margin-top:6px; }
+  .bar-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#c8a2c8,#f4a0a0); transition:width 0.6s ease; }
+  .bar-fill.active { background:linear-gradient(90deg,#4ecca3,#4ecca388); }
+  .app-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .app-time { text-align:right; }
+  .app-minutes { font-size:1.1em; font-weight:600; color:#c8a2c8; }
+  .app-unit { font-size:0.65em; color:#555; }
+  .app-actions { display:flex; flex-direction:column; gap:3px; }
+  .app-btn { padding:3px 8px; border-radius:7px; border:1px solid #2a2a3e; background:#15151f; color:#555; font-size:0.62em; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .app-btn:hover { border-color:#c8a2c8; color:#c8a2c8; }
+  .app-btn.force-close:hover { border-color:#f4a0a0; color:#f4a0a0; }
+  .app-btn.force-open:hover { border-color:#4ecca3; color:#4ecca3; }
+
+  /* Controls */
+  .controls { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:16px 0; }
+  .btn { padding:8px 16px; border-radius:10px; border:1px solid #2a2a3e; background:#15151f; color:#666; font-size:0.78em; cursor:pointer; transition:all 0.2s; }
+  .btn:hover { border-color:#c8a2c8; color:#c8a2c8; transform:translateY(-1px); }
+  .btn.danger:hover { border-color:#f4a0a0; color:#f4a0a0; }
+
+  .footer { text-align:center; color:#2a2a3e; font-size:0.7em; margin-top:24px; padding-bottom:20px; }
+  .footer:hover { color:#444; }
+
+  @media (max-width:400px) { .stats { grid-template-columns:1fr 1fr; gap:6px; } .header h1 { font-size:1.2em; } .total-time { font-size:2em; } }
 </style>
 </head>
 <body>
+<div class="container">
 
-<div class="night-owl-banner" id="night-owl">
-  <div class="emoji">🦉</div>
-  <div class="text" id="night-owl-text">小萤又在熬夜了！</div>
+<div class="night-owl" id="night-owl">
+  <span class="owl-emoji">🦉</span>
+  <div class="owl-text" id="night-owl-text">小萤又在熬夜了！</div>
 </div>
 
 <div class="header">
@@ -534,138 +513,150 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <div class="total-label">今日总屏幕时间</div>
 </div>
 
-<div class="current-activity" id="current-activity">
-  <div class="label">🟢 正在使用</div>
-  <div class="app-name" id="current-app-name">--</div>
-  <div class="duration" id="current-app-duration">--</div>
+<div class="current" id="current">
+  <div class="c-label">🟢 正在使用</div>
+  <div class="c-apps" id="c-apps">--</div>
+  <div class="c-dur" id="c-dur">--</div>
 </div>
 
-<div class="app-list" id="app-list"></div>
+<div class="stats" id="stats"></div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('apps')">📱 应用列表</div>
+  <div class="tab" onclick="switchTab('weekly')">📊 周趋势</div>
+</div>
+
+<div id="apps-view"><div class="app-list" id="app-list"></div></div>
+
+<div class="weekly-chart" id="weekly-view">
+  <h3>📊 最近7天屏幕使用时间</h3>
+  <div class="week-bars" id="week-bars"></div>
+</div>
 
 <div class="controls">
-  <button class="btn" onclick="refreshData()">🔄 刷新</button>
-  <button class="btn danger" onclick="resetAll()">重置全部状态</button>
+  <button class="btn" onclick="refreshAll()">🔄 刷新</button>
+  <button class="btn danger" onclick="resetAll()">⏹ 重置全部</button>
 </div>
 
-<div class="footer">
-  每30秒自动刷新 · 格与小萤的家
-</div>
+<div class="footer">每30秒自动刷新 · 格与小萤的家</div>
 
+</div>
 <script>
 const API = window.location.origin;
-const ICONS = {
-  '相册':'🖼','备忘录':'📝','Safari浏览器':'🧭','手机设置':'⚙️',
-  '小红书':'📕','WeChat':'💬','Telegram':'✈️','电话':'📞',
-  'Oura':'💍','相机':'📷','Discord':'🎮','信息':'💌',
-  'YouTube':'▶️','Twitter':'🐦','Instagram':'📸','TikTok':'🎵',
-  'Claude':'🤖','计算器':'🔢','天气':'🌤️',
-};
-function icon(n) { return ICONS[n] || '📱'; }
-function fmt(m) {
-  if (m < 1) return Math.round(m*60) + ' 秒';
-  if (m < 60) return Math.round(m) + ' 分钟';
-  const h = Math.floor(m/60), min = Math.round(m%60);
-  return h + ' 小时' + (min > 0 ? ' ' + min + ' 分' : '');
+const ICONS = {'相册':'🖼','备忘录':'📝','Safari浏览器':'🧭','手机设置':'⚙️','小红书':'📕','WeChat':'💬','Telegram':'✈️','电话':'📞','Oura':'💍','相机':'📷','Discord':'🎮','信息':'💌','YouTube':'▶️','Twitter':'🐦','Instagram':'📸','TikTok':'🎵','Claude':'🤖','计算器':'🔢','天气':'🌤️','地图':'🗺','音乐':'🎵','邮件':'📧','日历':'📅','时钟':'⏰','文件':'📁','App Store':'🏪','健康':'❤️'};
+function ic(n){return ICONS[n]||'📱'}
+function fmt(m){
+  if(m<1)return Math.round(m*60)+'秒';
+  if(m<60)return Math.round(m)+'分钟';
+  const h=Math.floor(m/60),min=Math.round(m%60);
+  return h+'小时'+(min>0?' '+min+'分':'');
+}
+let currentTab='apps';
+
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='apps'?0:1)));
+  document.getElementById('apps-view').style.display=tab==='apps'?'block':'none';
+  document.getElementById('weekly-view').classList.toggle('show',tab==='weekly');
+  if(tab==='weekly')loadWeekly();
 }
 
-async function refreshData() {
-  try {
-    const [todayRes, nightRes] = await Promise.all([
-      fetch(API + '/api/screentime/today'),
-      fetch(API + '/api/screentime/nightowl'),
-    ]);
-    const data = await todayRes.json();
-    const night = await nightRes.json();
+async function loadWeekly(){
+  try{
+    const res=await fetch(API+'/api/screentime/weekly');
+    const data=await res.json();
+    const days=Object.entries(data.days).sort((a,b)=>a[0].localeCompare(b[0]));
+    const maxM=Math.max(...days.map(([_,d])=>d.total_minutes),1);
+    const today=new Date().toISOString().slice(0,10);
+    document.getElementById('week-bars').innerHTML=days.map(([date,d])=>{
+      const h=Math.max(4,d.total_minutes/maxM*110);
+      const isToday=date===today;
+      return `<div class="week-bar-wrap">
+        <div class="week-bar-val">${d.total_minutes<60?Math.round(d.total_minutes)+'m':Math.round(d.total_minutes/60*10)/10+'h'}</div>
+        <div class="week-bar ${isToday?'today':''}" style="height:${h}px" title="${date}: ${fmt(d.total_minutes)}"></div>
+        <div class="week-bar-label">${d.weekday}${isToday?' 📍':''}</div>
+      </div>`;
+    }).join('');
+  }catch(e){}
+}
 
-    // Night owl banner
-    const banner = document.getElementById('night-owl');
-    if (night.is_staying_up_late) {
+async function refreshAll(){
+  try{
+    const [todayRes,nightRes]=await Promise.all([
+      fetch(API+'/api/screentime/today'),
+      fetch(API+'/api/screentime/nightowl'),
+    ]);
+    const data=await todayRes.json();
+    const night=await nightRes.json();
+
+    // Night owl
+    const banner=document.getElementById('night-owl');
+    if(night.is_staying_up_late){
       banner.classList.add('show');
-      document.getElementById('night-owl-text').textContent =
-        '小萤在熬夜！正在用: ' + night.currently_open_apps.join(', ');
-    } else {
-      banner.classList.remove('show');
-    }
+      document.getElementById('night-owl-text').textContent='小萤在熬夜！正在用: '+night.currently_open_apps.join(', ');
+    }else{banner.classList.remove('show')}
 
     // Header
-    document.getElementById('date-display').textContent =
-      data.date + ' · ' + data.current_time + ' ' + data.timezone;
-    document.getElementById('total-time').textContent = fmt(data.total_screen_time_minutes);
+    document.getElementById('date-display').textContent=data.date+' · '+data.current_time+' '+data.timezone;
+    document.getElementById('total-time').textContent=fmt(data.total_screen_time_minutes);
+
+    // Apps
+    const apps=Object.entries(data.apps).sort((a,b)=>b[1].total_minutes-a[1].total_minutes);
+    const activeApps=apps.filter(([_,v])=>v.status==='正在使用');
 
     // Current activity
-    const apps = Object.entries(data.apps).sort((a,b) => b[1].total_minutes - a[1].total_minutes);
-    const activeApps = apps.filter(([_,v]) => v.status === '正在使用');
-    const actDiv = document.getElementById('current-activity');
-    if (activeApps.length > 0) {
-      actDiv.classList.add('show');
-      const names = activeApps.map(([n,_]) => icon(n) + ' ' + n).join(', ');
-      const dur = activeApps.map(([n,v]) => n + ' ' + fmt(v.current_session_minutes || 0)).join(' · ');
-      document.getElementById('current-app-name').textContent = names;
-      document.getElementById('current-app-duration').textContent = dur;
-    } else {
-      actDiv.classList.remove('show');
-    }
+    const cur=document.getElementById('current');
+    if(activeApps.length>0){
+      cur.classList.add('show');
+      document.getElementById('c-apps').textContent=activeApps.map(([n])=>ic(n)+' '+n).join(', ');
+      document.getElementById('c-dur').textContent=activeApps.map(([n,v])=>n+' '+fmt(v.current_session_minutes||0)).join(' · ');
+    }else{cur.classList.remove('show')}
+
+    // Stats
+    const totalOpens=apps.reduce((s,[_,a])=>s+a.open_count,0);
+    const topApp=apps.length>0?apps[0]:['-',{total_minutes:0}];
+    const avgPerOpen=totalOpens>0?(data.total_screen_time_minutes/totalOpens):0;
+    document.getElementById('stats').innerHTML=`
+      <div class="stat-card"><div class="s-icon">📱</div><div class="s-value">${apps.length}</div><div class="s-label">使用应用数</div></div>
+      <div class="stat-card"><div class="s-icon">👆</div><div class="s-value">${totalOpens}</div><div class="s-label">总打开次数</div></div>
+      <div class="stat-card"><div class="s-icon">👑</div><div class="s-value">${ic(topApp[0])}</div><div class="s-label">最常用: ${topApp[0]}</div></div>
+      <div class="stat-card"><div class="s-icon">⏱</div><div class="s-value">${fmt(avgPerOpen)}</div><div class="s-label">平均每次使用</div></div>
+    `;
 
     // App list
-    const maxMin = apps.length > 0 ? apps[0][1].total_minutes : 1;
-    document.getElementById('app-list').innerHTML = apps.map(([name, info]) => {
-      const isActive = info.status === '正在使用';
-      return `
-      <div class="app-card ${isActive ? 'active' : ''}">
+    const maxMin=apps.length>0?apps[0][1].total_minutes:1;
+    document.getElementById('app-list').innerHTML=apps.map(([name,info],idx)=>{
+      const isActive=info.status==='正在使用';
+      return `<div class="app-card ${isActive?'active':''}" style="animation-delay:${idx*0.05}s">
         <div class="app-info">
-          <div class="app-icon">${icon(name)}</div>
-          <div>
-            <div class="app-name-text">
-              ${name}
-              ${isActive
-                ? '<span class="app-status">使用中</span>'
-                : '<span class="app-status closed">已关闭</span>'}
-            </div>
-            <div class="app-opens">打开 ${info.open_count} 次${
-              isActive && info.current_session_minutes
-                ? ' · 当前 ' + fmt(info.current_session_minutes)
-                : ''
-            }</div>
-            <div class="bar-bg"><div class="bar-fill ${isActive ? 'active' : ''}" style="width:${Math.max(2, info.total_minutes/maxMin*100)}%"></div></div>
+          <div class="app-icon">${ic(name)}</div>
+          <div class="app-detail">
+            <div class="app-name-text">${name}${isActive?'<span class="app-status">使用中</span>':'<span class="app-status closed">已关闭</span>'}</div>
+            <div class="app-opens">打开 ${info.open_count} 次${isActive&&info.current_session_minutes?' · 当前 '+fmt(info.current_session_minutes):''}</div>
+            <div class="bar-bg"><div class="bar-fill ${isActive?'active':''}" style="width:${Math.max(2,info.total_minutes/maxMin*100)}%"></div></div>
           </div>
         </div>
         <div class="app-right">
-          <div class="app-time">
-            <div class="app-minutes">${Math.round(info.total_minutes)}</div>
-            <div class="app-unit">分钟</div>
-          </div>
+          <div class="app-time"><div class="app-minutes">${Math.round(info.total_minutes)}</div><div class="app-unit">分钟</div></div>
           <div class="app-actions">
             ${isActive
-              ? `<button class="app-btn force-close" onclick="resetApp('${name}')">⏹ 关闭</button>`
-              : `<button class="app-btn force-open" onclick="forceOpen('${name}')">▶ 打开</button>`
-            }
+              ?`<button class="app-btn force-close" onclick="resetApp('${name}')">⏹ 关闭</button>`
+              :`<button class="app-btn force-open" onclick="forceOpen('${name}')">▶ 打开</button>`}
           </div>
         </div>
       </div>`;
-    }).join('');
-  } catch(e) {
-    document.getElementById('total-time').textContent = '加载失败';
-  }
+    }).join('')||('<div style="text-align:center;padding:40px;color:#444">今天还没有使用记录 ☕</div>');
+
+    if(currentTab==='weekly')loadWeekly();
+  }catch(e){document.getElementById('total-time').textContent='加载失败'}
 }
 
-async function resetAll() {
-  if (!confirm('确定要重置所有App的状态吗？')) return;
-  await fetch(API + '/api/screentime/reset_all');
-  refreshData();
-}
+async function resetAll(){if(!confirm('确定要重置所有App的状态吗？'))return;await fetch(API+'/api/screentime/reset_all');refreshAll()}
+async function resetApp(n){await fetch(API+'/api/screentime/reset/'+encodeURIComponent(n));refreshAll()}
+async function forceOpen(n){await fetch(API+'/api/screentime/toggle/'+encodeURIComponent(n));refreshAll()}
 
-async function resetApp(name) {
-  await fetch(API + '/api/screentime/reset/' + encodeURIComponent(name));
-  refreshData();
-}
-
-async function forceOpen(name) {
-  await fetch(API + '/api/screentime/toggle/' + encodeURIComponent(name));
-  refreshData();
-}
-
-refreshData();
-setInterval(refreshData, 30000);
+refreshAll();
+setInterval(refreshAll,30000);
 </script>
 </body>
 </html>"""
