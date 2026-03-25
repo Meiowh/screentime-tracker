@@ -476,9 +476,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     background: #0f1a15; color: #4ecca3; margin-left: 8px;
   }
   .app-status.closed { background: #1e1e2e; color: #555; }
+  .app-right { display: flex; align-items: center; gap: 12px; }
   .app-time { text-align: right; }
   .app-minutes { font-size: 1.15em; font-weight: 600; color: #c8a2c8; }
   .app-unit { font-size: 0.7em; color: #555; }
+  .app-actions { display: flex; flex-direction: column; gap: 4px; }
+  .app-btn {
+    padding: 4px 10px; border-radius: 8px; border: 1px solid #2a2a3e;
+    background: #15151f; color: #666; font-size: 0.65em; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .app-btn:hover { border-color: #c8a2c8; color: #c8a2c8; }
+  .app-btn.force-close { border-color: #f4a0a033; }
+  .app-btn.force-close:hover { border-color: #f4a0a0; color: #f4a0a0; }
+  .app-btn.force-open { border-color: #4ecca333; }
+  .app-btn.force-open:hover { border-color: #4ecca3; color: #4ecca3; }
   .bar-bg { width: 100%; height: 3px; background: #1e1e2e; border-radius: 2px; margin-top: 8px; }
   .bar-fill {
     height: 100%; border-radius: 2px;
@@ -617,9 +629,17 @@ async function refreshData() {
             <div class="bar-bg"><div class="bar-fill ${isActive ? 'active' : ''}" style="width:${Math.max(2, info.total_minutes/maxMin*100)}%"></div></div>
           </div>
         </div>
-        <div class="app-time">
-          <div class="app-minutes">${Math.round(info.total_minutes)}</div>
-          <div class="app-unit">分钟</div>
+        <div class="app-right">
+          <div class="app-time">
+            <div class="app-minutes">${Math.round(info.total_minutes)}</div>
+            <div class="app-unit">分钟</div>
+          </div>
+          <div class="app-actions">
+            ${isActive
+              ? `<button class="app-btn force-close" onclick="resetApp('${name}')">⏹ 关闭</button>`
+              : `<button class="app-btn force-open" onclick="forceOpen('${name}')">▶ 打开</button>`
+            }
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -631,6 +651,16 @@ async function refreshData() {
 async function resetAll() {
   if (!confirm('确定要重置所有App的状态吗？')) return;
   await fetch(API + '/api/screentime/reset_all');
+  refreshData();
+}
+
+async function resetApp(name) {
+  await fetch(API + '/api/screentime/reset/' + encodeURIComponent(name));
+  refreshData();
+}
+
+async function forceOpen(name) {
+  await fetch(API + '/api/screentime/toggle/' + encodeURIComponent(name));
   refreshData();
 }
 
