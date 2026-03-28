@@ -1874,7 +1874,7 @@ function renderCalendarGrid(){
   }
   for(let d=1;d<=daysInMonth;d++){
     const dateStr=calYear+'-'+String(calMonth).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const dayData=days[dateStr];
+    const dayData=days[dateStr]||days[String(d)];
     const isToday=dateStr===todayStr;
     const sec=dayData?dayData.total_seconds||0:0;
     // Use non-linear scaling: 0.2 + 0.8 * ratio, so any data is clearly visible
