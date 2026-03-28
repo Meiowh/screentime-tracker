@@ -1115,7 +1115,7 @@ async function saveSession(el){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    showToast('\u17b7>\u1d17<\u17b7 \u5df2\u4fdd\u5b58\u4fee\u6539\uff5e');
+    showToast('(>_<) \u5df2\u4fdd\u5b58\u4fee\u6539\uff5e');
     refreshAll();
   }catch(e){
     showToast('\u4fdd\u5b58\u5931\u8d25...');
@@ -1125,7 +1125,7 @@ async function saveSession(el){
 async function deleteSession(id){
   if(!confirm('\u786e\u5b9a\u8981\u5220\u9664\u8fd9\u4e2a\u4f1a\u8bdd\u5417\uff1f')) return;
   await fetch(API+'/api/screentime/session/'+id,{method:'DELETE'});
-  showToast('\u0eb6\u2461\uff65-\uff65\u2461\u10d0 \u5df2\u5220\u9664\uff5e');
+  showToast('(-.-)~ \u5df2\u5220\u9664\uff5e');
   refreshAll();
 }
 
@@ -1134,9 +1134,9 @@ async function toggleApp(app, action){
   try{
     await fetch(API+'/api/screentime/toggle/'+encodeURIComponent(app),{method:'GET'});
     if(action==='start'){
-      showToast('\u2768\u1d22\u2027\u203b\u2027\u1d22\u2769\u2661 \u5df2\u5f00\u542f\u8bb0\u5f55\uff5e');
+      showToast('(*^-^*) \u5df2\u5f00\u542f\u8bb0\u5f55\uff5e');
     } else {
-      showToast('\ua7a8\u2082\u207d\u5e\u02f6\u2a01\u0337\u035d\u2a01\u02f6\u5e\u2082)\u25de \u5df2\u5173\u95ed\uff5e');
+      showToast('(-.-)zzz \u5df2\u5173\u95ed\uff5e');
     }
     setTimeout(()=>refreshAll(), 500);
   }catch(e){
@@ -1152,10 +1152,10 @@ async function toggleCharging(){
   try{
     if(chargingOn){
       await fetch(API+'/api/event/charging_start');
-      showToast('\ua7a8\u2461\uff65-\uff65\u2461\u10d0 \u5f00\u59cb\u5145\u7535\uff5e');
+      showToast('(^o^)/ \u5f00\u59cb\u5145\u7535\uff5e');
     } else {
       await fetch(API+'/api/event/charging_stop');
-      showToast('\ua7a8\u2461\uff65-\uff65\u2461\u10d0 \u505c\u6b62\u5145\u7535\uff5e');
+      showToast('(-_-) \u505c\u6b62\u5145\u7535\uff5e');
     }
   }catch(e){}
 }
@@ -1168,10 +1168,10 @@ async function toggleLocation(){
   try{
     if(locationOn){
       await fetch(API+'/api/event/arrived_home');
-      showToast('/\u1d20 - \u02d5 -\u30de \u5df2\u5230\u5bb6\uff5e');
+      showToast('(=^-^=) \u5df2\u5230\u5bb6\uff5e');
     } else {
       await fetch(API+'/api/event/left_home');
-      showToast('/\u1d20 - \u02d5 -\u30de \u5df2\u51fa\u95e8\uff5e');
+      showToast('(^_^)/ \u5df2\u51fa\u95e8\uff5e');
     }
   }catch(e){}
 }
@@ -1179,14 +1179,14 @@ async function toggleLocation(){
 // ============ Refresh Button ============
 function doRefresh(){
   refreshAll();
-  showToast('/\u1d20 - \u02d5 -\u30de \u6570\u636e\u5df2\u5237\u65b0\uff5e');
+  showToast('(*^_^*) \u6570\u636e\u5df2\u5237\u65b0\uff5e');
 }
 
 // ============ Reset All ============
 async function resetAll(){
   if(!confirm('\u786e\u5b9a\u8981\u91cd\u7f6e\u6240\u6709\u6570\u636e\u5417\uff1f')) return;
   await fetch(API+'/api/screentime/reset_all');
-  showToast('\u10ae\u2082\u207d\u5e\u02f6\u2a01\u0337\u035d\u2a01\u02f6\u5e\u2082)\u25de \u5df2\u91cd\u7f6e\uff5e');
+  showToast('(o_o) \u5df2\u91cd\u7f6e\uff5e');
   refreshAll();
 }
 
