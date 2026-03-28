@@ -64,7 +64,7 @@ body{
 }
 .kaomoji-bg span{
   position:absolute;
-  color:rgba(255,255,255,0.18);
+  color:rgba(255,255,255,0.6);
   font-family:'Zen Maru Gothic',sans-serif;
   animation:kaomojiFade 30s ease-in-out infinite;
 }
@@ -397,14 +397,15 @@ body{
 /* Hourly timeline chart */
 .hourly-chart{
   display:flex;align-items:flex-end;gap:2px;
-  height:120px;padding:12px 0 4px;
+  height:140px;
   margin-bottom:16px;
   background:var(--card-bg);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border:1px solid var(--card-border);
   border-radius:24px;
   box-shadow:var(--card-shadow);
-  padding:16px 10px 8px;
+  padding:12px;
+  overflow:visible;
 }
 .hourly-col{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
@@ -755,6 +756,14 @@ body{
         </div>
       </div>
 
+      <!-- Longest Session -->
+      <div class="longest-card" id="longestCard">
+        <div class="longest-header">&#x4eca;&#x65e5;&#x6700;&#x957f;&#x8fde;&#x7eed;&#x4f7f;&#x7528;</div>
+        <div class="longest-value" id="longestValue">--</div>
+        <div class="longest-app" id="longestApp">--</div>
+        <div class="longest-time" id="longestTime">--</div>
+      </div>
+
       <!-- Status Pills -->
       <div class="status-pills" id="statusPills">
         <div class="status-pill charging-off" id="chargingPill">
@@ -765,14 +774,6 @@ body{
           <span class="pill-dot"></span>
           <span id="locationPillText">&#x5916;&#x51fa;</span>
         </div>
-      </div>
-
-      <!-- Longest Session -->
-      <div class="longest-card" id="longestCard">
-        <div class="longest-header">&#x4eca;&#x65e5;&#x6700;&#x957f;&#x8fde;&#x7eed;&#x4f7f;&#x7528;</div>
-        <div class="longest-value" id="longestValue">--</div>
-        <div class="longest-app" id="longestApp">--</div>
-        <div class="longest-time" id="longestTime">--</div>
       </div>
     </div>
   </div>
@@ -901,7 +902,7 @@ const API = window.location.origin;
 const DOT_COLORS = ['#7ec8e3','#a8e6cf','#ffc0cb','#ffe4a0','#8ee4af','#b8e4f0','#ffd6e0','#c8e6ff'];
 function dotColor(i){ return DOT_COLORS[i % DOT_COLORS.length]; }
 
-const APP_COLORS = ['#7ec8e3','#a8e6cf','#ffc0cb','#ffe4a0','#b8e4f0','#ffb4b4','#c5e8b0','#e8c5e0','#a0d8ef','#f0c8a0'];
+const APP_COLORS = ['#4A90D9','#E8556D','#50C878','#F5A623','#9B59B6','#E74C3C','#1ABC9C','#F39C12','#3498DB','#E91E63','#2ECC71','#FF6B35','#8E44AD','#16A085','#D35400','#2980B9'];
 function appColor(name) {
   let h = 0;
   for(let i=0; i<name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
@@ -1107,67 +1108,35 @@ async function refreshAll(){
       document.getElementById('longestTime').textContent=longest.started+' \u2192 '+longest.ended;
     }else{lc.classList.remove('show')}
 
-    // Charging & Location status (for Settings toggles)
-    try{
-      const chargeRes=await fetch(API+'/api/event/charging_history');
-      const chargeData=await chargeRes.json();
-      if(chargeData.events&&chargeData.events.length>0){
-        const last=chargeData.events[0];
-        chargingOn = last.type==='charging_start';
-        const ct=document.getElementById('chargingToggle');
-        ct.classList.toggle('on', chargingOn);
-      }
-    }catch(e){}
-    try{
-      const locRes=await fetch(API+'/api/event/location_history');
-      const locData=await locRes.json();
-      if(locData.events&&locData.events.length>0){
-        const last=locData.events[0];
-        locationOn = last.type==='arrived_home';
-        const lt=document.getElementById('locationToggle');
-        lt.classList.toggle('on', locationOn);
-      }
-    }catch(e){}
-
-    // Update status pills on home page
+    // Sync toggles + status pills from /api/screentime/status
     try{
       const statusRes=await fetch(API+'/api/screentime/status');
-      const statusData=await statusRes.json();
+      const status=await statusRes.json();
+
+      // Sync settings page toggles
+      chargingOn = status.charging;
+      locationOn = status.at_home;
+      document.getElementById('chargingToggle').classList.toggle('on', chargingOn);
+      document.getElementById('locationToggle').classList.toggle('on', locationOn);
+
+      // Sync home page status pills
       const cPill=document.getElementById('chargingPill');
       const lPill=document.getElementById('locationPill');
-      if(statusData.charging){
+      if(status.charging){
         cPill.className='status-pill charging-on';
         document.getElementById('chargingPillText').textContent='\u5145\u7535\u4e2d';
       } else {
         cPill.className='status-pill charging-off';
         document.getElementById('chargingPillText').textContent='\u672a\u5145\u7535';
       }
-      if(statusData.at_home){
+      if(status.at_home){
         lPill.className='status-pill loc-home';
         document.getElementById('locationPillText').textContent='\u5728\u5bb6';
       } else {
         lPill.className='status-pill loc-away';
         document.getElementById('locationPillText').textContent='\u5916\u51fa';
       }
-    }catch(e){
-      // fallback: use toggle state
-      const cPill=document.getElementById('chargingPill');
-      const lPill=document.getElementById('locationPill');
-      if(chargingOn){
-        cPill.className='status-pill charging-on';
-        document.getElementById('chargingPillText').textContent='\u5145\u7535\u4e2d';
-      } else {
-        cPill.className='status-pill charging-off';
-        document.getElementById('chargingPillText').textContent='\u672a\u5145\u7535';
-      }
-      if(locationOn){
-        lPill.className='status-pill loc-home';
-        document.getElementById('locationPillText').textContent='\u5728\u5bb6';
-      } else {
-        lPill.className='status-pill loc-away';
-        document.getElementById('locationPillText').textContent='\u5916\u51fa';
-      }
-    }
+    }catch(e){}
 
     // Load data tab content if visible
     if(currentPage===2){loadHeatmap();loadWeekly();}
@@ -1239,24 +1208,13 @@ async function loadSessions(){
       const maxMins=Math.max(...Object.values(hours).map(h=>(h.total_seconds||0)/60),1);
       let chartHtml='';
       for(let h=0;h<24;h++){
-        const info=hours[h]||{total_seconds:0,apps:{}};
+        const info=hours[h]||{total_seconds:0};
         const totalMins=(info.total_seconds||0)/60;
-        const barH=Math.max(0,totalMins/maxMins*90);
-        let segsHtml='';
-        if(info.apps && typeof info.apps==='object'){
-          const appEntries=Object.entries(info.apps).sort((a,b)=>b[1]-a[1]);
-          const totalSec=info.total_seconds||1;
-          appEntries.forEach(([app,secs])=>{
-            const segH=Math.max(1,(secs/totalSec)*barH);
-            const c=appColor(app);
-            segsHtml+=`<div class="hourly-seg" style="height:${segH}px;background:${c}" title="${app}: ${Math.round(secs/60)}min"></div>`;
-          });
-        } else {
-          if(barH>0) segsHtml=`<div class="hourly-seg" style="height:${barH}px;background:var(--primary-light)"></div>`;
-        }
+        const barH=Math.max(0,totalMins/maxMins*100);
         const showLabel=(h%3===0);
+        const gradientStyle=barH>0?'background:linear-gradient(180deg,#4A90D9,#1ABC9C)':'';
         chartHtml+=`<div class="hourly-col">
-          <div class="hourly-bar" style="height:${barH}px">${segsHtml}</div>
+          <div class="hourly-bar" style="height:${barH}px"><div class="hourly-seg" style="height:100%;${gradientStyle};border-radius:4px 4px 0 0" title="${h}:00 - ${Math.round(totalMins)}min"></div></div>
           <div class="hourly-label">${showLabel?h:''}</div>
         </div>`;
       }
