@@ -999,20 +999,6 @@ body{
             <div class="calendar-day-header">&#x65e5;</div>
           </div>
           <div class="calendar-grid" id="calendarGrid"></div>
-
-          <div style="margin-top:18px;border-top:1px solid var(--card-border);padding-top:14px">
-            <div class="data-card-title">24&#x5c0f;&#x65f6;&#x6d3b;&#x52a8;&#x70ed;&#x529b;&#x56fe;</div>
-            <div class="heatmap" id="heatmap"></div>
-            <div class="heatmap-legend">
-              <span>&#x5c11;</span>
-              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.04)"></div>
-              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.22)"></div>
-              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.40)"></div>
-              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.58)"></div>
-              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.78)"></div>
-              <span>&#x591a;</span>
-            </div>
-          </div>
         </div>
 
         <div class="data-card">
@@ -1919,7 +1905,7 @@ async function showDayReport(dateStr){
     }).join('');
 
     // Build heatmap for this day
-    const hours=data.hours||{};
+    const hours=data.hourly||{};
     const maxH=Math.max(...Object.values(hours).map(h=>h.total_seconds||0),1);
     let heatHtml='';
     for(let h=0;h<24;h++){
@@ -1983,16 +1969,20 @@ function applyWatermarkSettings(){
   spans.forEach((sp,idx)=>{
     sp.style.color=color;
     sp.style.opacity=(opacity/100).toString();
-    // Preserve original rotation, only update scale
+    // Store original font-size on first run
+    if(!sp.getAttribute('data-orig-fontsize')){
+      const fs=parseFloat(sp.style.fontSize)||16;
+      sp.setAttribute('data-orig-fontsize', fs);
+    }
+    const origFs=parseFloat(sp.getAttribute('data-orig-fontsize'));
+    sp.style.fontSize=Math.round(origFs*(size/100))+'px';
+    // Preserve original rotation only (no scale needed, font-size handles sizing)
     const origRotate=sp.getAttribute('data-orig-rotate');
     if(!origRotate){
-      // Extract and save original rotation from inline style
       const m=sp.style.transform.match(/rotate\([^)]*\)/);
       sp.setAttribute('data-orig-rotate', m?m[0]:'');
     }
-    const rot=sp.getAttribute('data-orig-rotate')||'';
-    const scl=size!==100?' scale('+(size/100)+')':'';
-    sp.style.transform=rot+scl;
+    sp.style.transform=sp.getAttribute('data-orig-rotate')||'';
     // Update content if custom kaomoji set
     if(kaomojiList.length>0){
       sp.textContent=kaomojiList[idx%kaomojiList.length];
