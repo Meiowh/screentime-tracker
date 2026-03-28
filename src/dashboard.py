@@ -1075,6 +1075,21 @@ body{
       </div>
 
       <div class="watermark-section">
+        <div class="watermark-title">&#x80cc;&#x666f;&#x989c;&#x8272;</div>
+        <div class="watermark-row">
+          <label>&#x8d77;&#x59cb;</label>
+          <input type="color" id="bgColor1" value="#d4e8f5" onchange="onBgChange()">
+        </div>
+        <div class="watermark-row">
+          <label>&#x4e2d;&#x95f4;</label>
+          <input type="color" id="bgColor2" value="#b8d8ee" onchange="onBgChange()">
+        </div>
+        <div class="watermark-row">
+          <label>&#x7ec8;&#x70b9;</label>
+          <input type="color" id="bgColor3" value="#a8d0e0" onchange="onBgChange()">
+        </div>
+      </div>
+      <div class="watermark-section">
         <div class="watermark-title">&#x6c34;&#x5370;&#x8bbe;&#x7f6e;</div>
         <div class="watermark-row">
           <label>&#x989c;&#x8272;</label>
@@ -1946,6 +1961,30 @@ function backToCalendar(){
   document.getElementById('calendarView').style.display='block';
 }
 
+// ============ Background Color Settings ============
+function onBgChange(){
+  const c1=document.getElementById('bgColor1').value;
+  const c2=document.getElementById('bgColor2').value;
+  const c3=document.getElementById('bgColor3').value;
+  localStorage.setItem('bg_color1',c1);
+  localStorage.setItem('bg_color2',c2);
+  localStorage.setItem('bg_color3',c3);
+  applyBgSettings();
+}
+function applyBgSettings(){
+  const c1=localStorage.getItem('bg_color1')||'#d4e8f5';
+  const c2=localStorage.getItem('bg_color2')||'#b8d8ee';
+  const c3=localStorage.getItem('bg_color3')||'#a8d0e0';
+  document.body.style.background=`linear-gradient(135deg,${c1},${c2},${c3},${c1})`;
+  document.body.style.backgroundSize='400% 400%';
+  const el1=document.getElementById('bgColor1');
+  const el2=document.getElementById('bgColor2');
+  const el3=document.getElementById('bgColor3');
+  if(el1) el1.value=c1;
+  if(el2) el2.value=c2;
+  if(el3) el3.value=c3;
+}
+
 // ============ Watermark Settings ============
 function onWatermarkChange(){
   const color=document.getElementById('wmColor').value;
@@ -2000,6 +2039,7 @@ function applyWatermarkSettings(){
 }
 
 // ============ Init ============
+applyBgSettings();
 applyWatermarkSettings();
 loadCalendar();
 refreshAll();
