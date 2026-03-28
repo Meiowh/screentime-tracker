@@ -1,5 +1,6 @@
 """Core business logic — toggle handling, summaries, analytics."""
 
+import calendar
 from datetime import datetime, timedelta
 from src.config import (
     TIMEZONE, TIMEZONE_LABEL, NIGHT_OWL_START, NIGHT_OWL_END,
@@ -476,33 +477,135 @@ def app_open_count(app_name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_charging_history() -> dict:
-    """Last 3 days of charging events."""
+    """Last 3 days of charging events, paired as start/stop sessions."""
     events = db.get_events_by_types_recent(["charging_start", "charging_stop"], days=3)
-    return {
-        "events": [
-            {
+    # Events come newest-first; reverse to chronological for pairing
+    events = list(reversed(events))
+
+    now = _now()
+    pairs = []
+    pending_start = None
+
+    for e in events:
+        local_ts = _to_local(e["ts"])
+        if e["type"] == "charging_start":
+            # If there's already a pending start without a stop, close it as incomplete
+            if pending_start is not None:
+                pairs.append({
+                    "start_time": pending_start["time_str"],
+                    "end_time": None,
+                    "duration_minutes": int((local_ts - pending_start["ts"]).total_seconds() / 60),
+                    "start_id": pending_start["id"],
+                    "end_id": None,
+                    "date": pending_start["date_str"],
+                    "ongoing": False,
+                })
+            pending_start = {
                 "id": e["id"],
-                "type": e["type"],
-                "time": _to_local(e["ts"]).strftime("%Y-%m-%d %H:%M:%S"),
+                "ts": local_ts,
+                "time_str": local_ts.strftime("%H:%M"),
+                "date_str": local_ts.strftime("%Y-%m-%d"),
             }
-            for e in events
-        ]
-    }
+        elif e["type"] == "charging_stop" and pending_start is not None:
+            pairs.append({
+                "start_time": pending_start["time_str"],
+                "end_time": local_ts.strftime("%H:%M"),
+                "duration_minutes": int((local_ts - pending_start["ts"]).total_seconds() / 60),
+                "start_id": pending_start["id"],
+                "end_id": e["id"],
+                "date": pending_start["date_str"],
+            })
+            pending_start = None
+
+    # If there's still a pending start with no stop, it's ongoing
+    if pending_start is not None:
+        pairs.append({
+            "start_time": pending_start["time_str"],
+            "end_time": None,
+            "duration_minutes": int((now - pending_start["ts"]).total_seconds() / 60),
+            "start_id": pending_start["id"],
+            "end_id": None,
+            "date": pending_start["date_str"],
+            "ongoing": True,
+        })
+
+    # Group by day
+    by_day: dict[str, list] = {}
+    for p in pairs:
+        day = p["date"]
+        by_day.setdefault(day, []).append(p)
+
+    return {"pairs": pairs, "by_day": by_day}
 
 
 def get_location_history() -> dict:
-    """Last 3 days of location events."""
+    """Last 3 days of location events, paired as left_home/arrived_home trips."""
     events = db.get_events_by_types_recent(["left_home", "arrived_home"], days=3)
-    return {
-        "events": [
-            {
+    # Events come newest-first; reverse to chronological for pairing
+    events = list(reversed(events))
+
+    now = _now()
+    pairs = []
+    pending_left = None
+
+    for e in events:
+        local_ts = _to_local(e["ts"])
+        if e["type"] == "left_home":
+            # If there's already a pending left without an arrival, close it as incomplete
+            if pending_left is not None:
+                pairs.append({
+                    "left_time": pending_left["time_str"],
+                    "arrived_time": None,
+                    "duration_minutes": int((local_ts - pending_left["ts"]).total_seconds() / 60),
+                    "left_id": pending_left["id"],
+                    "arrived_id": None,
+                    "date": pending_left["date_str"],
+                    "ongoing": False,
+                })
+            pending_left = {
                 "id": e["id"],
-                "type": e["type"],
-                "time": _to_local(e["ts"]).strftime("%Y-%m-%d %H:%M:%S"),
+                "ts": local_ts,
+                "time_str": local_ts.strftime("%H:%M"),
+                "date_str": local_ts.strftime("%Y-%m-%d"),
             }
-            for e in events
-        ]
-    }
+        elif e["type"] == "arrived_home" and pending_left is not None:
+            pairs.append({
+                "left_time": pending_left["time_str"],
+                "arrived_time": local_ts.strftime("%H:%M"),
+                "duration_minutes": int((local_ts - pending_left["ts"]).total_seconds() / 60),
+                "left_id": pending_left["id"],
+                "arrived_id": e["id"],
+                "date": pending_left["date_str"],
+            })
+            pending_left = None
+
+    # If there's still a pending left with no arrival, she's currently out
+    if pending_left is not None:
+        pairs.append({
+            "left_time": pending_left["time_str"],
+            "arrived_time": None,
+            "duration_minutes": int((now - pending_left["ts"]).total_seconds() / 60),
+            "left_id": pending_left["id"],
+            "arrived_id": None,
+            "date": pending_left["date_str"],
+            "ongoing": True,
+        })
+
+    # Check if today has no left_home at all -> home all day
+    today_str = now.strftime("%Y-%m-%d")
+    today_has_left = any(p["date"] == today_str for p in pairs)
+
+    # Group by day
+    by_day: dict[str, list] = {}
+    for p in pairs:
+        day = p["date"]
+        by_day.setdefault(day, []).append(p)
+
+    # If today has no trips, mark as home all day
+    if not today_has_left:
+        by_day.setdefault(today_str, []).append({"status": "home_all_day", "date": today_str})
+
+    return {"pairs": pairs, "by_day": by_day}
 
 
 def get_current_status() -> dict:
@@ -621,12 +724,93 @@ def compare_days(date1: str, date2: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Day summary (specific date)
+# ---------------------------------------------------------------------------
+
+def get_day_summary(date_str: str) -> dict:
+    """Detailed summary for a specific date (YYYY-MM-DD) in ET."""
+    sessions = db.get_sessions_for_date(date_str, TZ_NAME)
+    now = _now()
+
+    apps: dict[str, int] = {}
+    hourly: dict[int, dict] = {h: {"total_seconds": 0, "apps": {}} for h in range(24)}
+
+    for s in sessions:
+        app = s["app"]
+        dur = _session_duration_seconds(s)
+        apps[app] = apps.get(app, 0) + dur
+
+        # Distribute seconds across hours
+        start = _to_local(s["start_ts"])
+        end = _to_local(s["end_ts"]) if s["end_ts"] else now
+        current = start
+        while current < end:
+            h = current.hour
+            next_hour = current.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            slot_end = min(next_hour, end)
+            secs = int((slot_end - current).total_seconds())
+            if secs > 0:
+                hourly[h]["total_seconds"] += secs
+                hourly[h]["apps"][app] = hourly[h]["apps"].get(app, 0) + secs
+            current = slot_end
+
+    total_seconds = sum(apps.values())
+
+    app_list = []
+    for name, secs in sorted(apps.items(), key=lambda x: x[1], reverse=True):
+        app_list.append({
+            "app": name,
+            "total_seconds": secs,
+            "total_formatted": _fmt_duration(secs),
+            "percentage": round(secs / total_seconds * 100, 1) if total_seconds > 0 else 0,
+        })
+
+    return {
+        "date": date_str,
+        "total_seconds": total_seconds,
+        "total_formatted": _fmt_duration(total_seconds),
+        "app_count": len(apps),
+        "apps": app_list,
+        "hourly": {str(h): data for h, data in hourly.items()},
+    }
+
+
+# ---------------------------------------------------------------------------
+# Month overview
+# ---------------------------------------------------------------------------
+
+def get_month_overview(year: int, month: int) -> dict:
+    """Per-day totals for a given month."""
+    sessions = db.get_sessions_for_month(year, month, TZ_NAME)
+    num_days = calendar.monthrange(year, month)[1]
+
+    days: dict[str, dict] = {}
+    for d in range(1, num_days + 1):
+        days[str(d)] = {"total_seconds": 0, "has_data": False}
+
+    for s in sessions:
+        local_start = _to_local(s["start_ts"])
+        day_key = str(local_start.day)
+        dur = _session_duration_seconds(s)
+        days[day_key]["total_seconds"] += dur
+        days[day_key]["has_data"] = True
+
+    return {
+        "year": year,
+        "month": month,
+        "days": days,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Sessions list for API/dashboard
 # ---------------------------------------------------------------------------
 
 def get_recent_sessions_list(limit: int = 30) -> dict:
-    """Recent sessions for the API."""
-    sessions = db.get_recent_sessions(limit)
+    """Today's sessions in ET timezone (most recent first)."""
+    sessions = db.get_sessions_today_et(TZ_NAME)
+    # Apply limit after filtering by today
+    sessions = sessions[:limit]
     return {
         "sessions": [
             {

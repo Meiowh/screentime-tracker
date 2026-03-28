@@ -50,6 +50,21 @@ async def location_history_api(request: Request) -> JSONResponse:
     return JSONResponse(models.get_location_history())
 
 
+# --- Day summary & month overview (must be before wildcard routes) ---
+
+@mcp.custom_route("/api/screentime/day/{date}", methods=["GET"])
+async def day_summary_api(request: Request) -> JSONResponse:
+    date_str = request.path_params["date"]
+    return JSONResponse(models.get_day_summary(date_str))
+
+
+@mcp.custom_route("/api/screentime/month/{year}/{month}", methods=["GET"])
+async def month_overview_api(request: Request) -> JSONResponse:
+    year = int(request.path_params["year"])
+    month = int(request.path_params["month"])
+    return JSONResponse(models.get_month_overview(year, month))
+
+
 @mcp.custom_route("/api/history/delete/{event_id}", methods=["GET", "DELETE"])
 async def delete_event_route(request: Request) -> JSONResponse:
     event_id = int(request.path_params["event_id"])

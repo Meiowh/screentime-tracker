@@ -225,6 +225,32 @@ def get_sessions_between_dates(start_date: str, end_date: str, tz_name: str):
         return [dict(r) for r in cur.fetchall()]
 
 
+def get_sessions_for_month(year: int, month: int, tz_name: str):
+    """All sessions for a given year/month in the given timezone."""
+    with get_cursor() as cur:
+        cur.execute(
+            """SELECT * FROM sessions
+             WHERE start_ts >= (make_date(%s, %s, 1) AT TIME ZONE %s)
+               AND start_ts < ((make_date(%s, %s, 1) + INTERVAL '1 month') AT TIME ZONE %s)
+             ORDER BY start_ts""",
+            (year, month, tz_name, year, month, tz_name),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_sessions_today_et(tz_name: str):
+    """All sessions that started today in the given timezone (filtered by local date)."""
+    with get_cursor() as cur:
+        cur.execute(
+            """SELECT * FROM sessions
+             WHERE start_ts >= date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s
+               AND start_ts < (date_trunc('day', NOW() AT TIME ZONE %s) + INTERVAL '1 day') AT TIME ZONE %s
+             ORDER BY start_ts DESC""",
+            (tz_name, tz_name, tz_name, tz_name),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
 def get_recent_sessions(limit: int = 30):
     """Most recent sessions."""
     with get_cursor() as cur:
