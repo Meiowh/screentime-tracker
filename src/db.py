@@ -128,6 +128,17 @@ def get_active_session():
         return dict(row) if row else None
 
 
+def get_last_closed_session_for_app(app_name: str):
+    """Return the most recently closed session for a specific app, or None."""
+    with get_cursor() as cur:
+        cur.execute(
+            "SELECT * FROM sessions WHERE app = %s AND end_ts IS NOT NULL ORDER BY end_ts DESC LIMIT 1",
+            (app_name,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
 def get_all_active_sessions():
     """Return ALL currently open sessions (end_ts IS NULL)."""
     with get_cursor() as cur:

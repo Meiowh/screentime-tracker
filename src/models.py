@@ -68,6 +68,20 @@ def handle_toggle(app_name: str) -> dict:
     # Clean up stale sessions first
     auto_close_stale_sessions()
 
+    # Fast-switch guard: if this app was closed less than 3 seconds ago,
+    # this toggle is a delayed App Close signal arriving after a new app
+    # was already opened. Ignore it to prevent the old app from reopening.
+    last_closed = db.get_last_closed_session_for_app(app_name)
+    if last_closed and last_closed.get("end_ts"):
+        from datetime import timezone
+        closed_at = last_closed["end_ts"]
+        if closed_at.tzinfo is None:
+            closed_at = closed_at.replace(tzinfo=timezone.utc)
+        seconds_since_close = (datetime.now(timezone.utc) - closed_at).total_seconds()
+        if seconds_since_close < 3:
+            db.insert_event("app_toggle", value=app_name)
+            return {"action": "ignored", "app": app_name, "reason": "fast_switch_guard", "seconds_since_close": round(seconds_since_close, 1)}
+
     active = db.get_active_session()
 
     result = {}
