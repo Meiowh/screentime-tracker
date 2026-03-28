@@ -820,6 +820,79 @@ def get_month_overview(year: int, month: int) -> dict:
 # Sessions list for API/dashboard
 # ---------------------------------------------------------------------------
 
+def hourly_sleep_check() -> dict:
+    """Check if the user is likely sleeping or needs a reminder.
+    Called by cron job every hour.
+
+    Rules (ET timezone):
+    1. Charging + no activity 2h + night(0-8) + active session -> auto close, msg: sleep
+    2. Charging + no activity 3h + day(8-24) + active session -> auto close, msg: nap
+    3. No charge + no activity 4h + night(0-8) + active session -> auto close, msg: night_warning
+    4. No charge + no activity 2h + day(8-24) + active session -> no close, msg: reminder_2h
+    5. No charge + no activity 3h + day(8-24) + active session -> no close, msg: reminder_3h
+    6. No charge + no activity 4h + day(8-24) + active session -> auto close, msg: forced_close
+    """
+    now = _now()
+    hour = now.hour
+    is_night = 0 <= hour < 8
+
+    active = db.get_active_session()
+    if not active:
+        return {"action": "none"}
+
+    # Calculate hours idle: time since session started or last toggle event
+    last_toggle_event = db.get_latest_event_by_type("app_toggle")
+    if last_toggle_event and last_toggle_event["ts"]:
+        last_activity = _to_local(last_toggle_event["ts"])
+    else:
+        last_activity = _to_local(active["start_ts"])
+
+    hours_idle = (now - last_activity).total_seconds() / 3600
+    app = active["app"]
+
+    # Check charging status
+    last_charge_start = db.get_latest_event_by_type("charging_start")
+    last_charge_stop = db.get_latest_event_by_type("charging_stop")
+    if last_charge_start and last_charge_stop:
+        is_charging = last_charge_start["ts"] > last_charge_stop["ts"]
+    elif last_charge_start:
+        is_charging = True
+    else:
+        is_charging = False
+
+    # Apply rules in order, return first match
+    # Rule 1: Charging + 2h idle + night + active -> auto close, sleep
+    if is_charging and hours_idle >= 2 and is_night:
+        db.close_session(active["id"], end_reason="sleep_inferred")
+        return {"action": "closed", "msg_type": "sleep", "app": app, "hours_idle": round(hours_idle, 1)}
+
+    # Rule 2: Charging + 3h idle + day + active -> auto close, nap
+    if is_charging and hours_idle >= 3 and not is_night:
+        db.close_session(active["id"], end_reason="sleep_inferred")
+        return {"action": "closed", "msg_type": "nap", "app": app, "hours_idle": round(hours_idle, 1)}
+
+    # Rule 3: No charge + 4h idle + night + active -> auto close, night_warning
+    if not is_charging and hours_idle >= 4 and is_night:
+        db.close_session(active["id"], end_reason="auto_timeout")
+        return {"action": "closed", "msg_type": "night_warning", "app": app, "hours_idle": round(hours_idle, 1)}
+
+    # Rule 6: No charge + 4h idle + day + active -> auto close, forced_close
+    # (check before 2h/3h reminders so 4h takes priority)
+    if not is_charging and hours_idle >= 4 and not is_night:
+        db.close_session(active["id"], end_reason="auto_timeout")
+        return {"action": "closed", "msg_type": "forced_close", "app": app, "hours_idle": round(hours_idle, 1)}
+
+    # Rule 5: No charge + 3h idle + day + active -> no close, reminder_3h
+    if not is_charging and hours_idle >= 3 and not is_night:
+        return {"action": "remind", "msg_type": "reminder_3h", "app": app, "hours_idle": round(hours_idle, 1)}
+
+    # Rule 4: No charge + 2h idle + day + active -> no close, reminder_2h
+    if not is_charging and hours_idle >= 2 and not is_night:
+        return {"action": "remind", "msg_type": "reminder_2h", "app": app, "hours_idle": round(hours_idle, 1)}
+
+    return {"action": "none"}
+
+
 def get_recent_sessions_list(limit: int = 30) -> dict:
     """Today's sessions in ET timezone (most recent first)."""
     sessions = db.get_sessions_today_et(TZ_NAME)

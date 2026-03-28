@@ -8,6 +8,7 @@ from mcp.server.fastmcp import FastMCP
 from src.config import PORT
 from src import models
 from src.dashboard import render_dashboard
+from src.notify import send_telegram_notification
 
 # ---------------------------------------------------------------------------
 # FastMCP instance
@@ -21,7 +22,7 @@ mcp = FastMCP("Screen Time", host="0.0.0.0", port=PORT)
 
 @mcp.custom_route("/", methods=["GET"])
 async def root(request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok", "service": "Screen Time Tracker v3"})
+    return JSONResponse({"status": "ok", "service": "Screen Time Tracker v3", "panel": "/panel"})
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -191,9 +192,19 @@ async def status_api(request: Request) -> JSONResponse:
     return JSONResponse(models.get_current_status())
 
 
+# --- Hourly cron check ---
+
+@mcp.custom_route("/api/cron/hourly_check", methods=["GET"])
+async def hourly_check(request: Request) -> JSONResponse:
+    result = models.hourly_sleep_check()
+    if result.get("msg_type"):
+        send_telegram_notification(result)
+    return JSONResponse(result)
+
+
 # --- Dashboard ---
 
-@mcp.custom_route("/dashboard", methods=["GET"])
+@mcp.custom_route("/panel", methods=["GET"])
 async def dashboard(request: Request) -> HTMLResponse:
     return HTMLResponse(render_dashboard())
 
