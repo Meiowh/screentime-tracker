@@ -64,7 +64,7 @@ body{
 }
 .kaomoji-bg span{
   position:absolute;
-  color:rgba(255,255,255,0.6);
+  color:rgba(70,100,140,0.15);
   font-family:'Zen Maru Gothic',sans-serif;
   animation:kaomojiFade 30s ease-in-out infinite;
 }
@@ -394,10 +394,33 @@ body{
 .week-bar-label.today{color:var(--primary);font-weight:700}
 
 /* ============ PAGE 4: Sessions ============ */
-/* Hourly timeline chart */
+/* Collapsible hourly stacked bar chart */
+.hourly-toggle-btn{
+  width:100%;padding:12px 20px;margin-bottom:12px;
+  background:var(--card-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  box-shadow:var(--card-shadow);
+  font-size:0.88em;font-weight:600;color:var(--text);
+  cursor:pointer;transition:all 0.3s ease;
+  font-family:'Zen Maru Gothic',sans-serif;
+  text-align:center;
+}
+.hourly-toggle-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 40px rgba(120,180,220,0.22);
+  border-color:rgba(180,220,245,0.6);
+}
+.hourly-wrap{
+  max-height:0;overflow:hidden;transition:max-height 0.4s ease;
+}
+.hourly-wrap.expanded{
+  max-height:500px;
+}
 .hourly-chart{
   display:flex;align-items:flex-end;gap:2px;
-  height:140px;
+  min-height:100px;max-height:200px;
   margin-bottom:16px;
   background:var(--card-bg);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
@@ -421,10 +444,6 @@ body{
 .hourly-label{
   font-size:0.55em;color:var(--text-dim);margin-top:3px;font-weight:500;
   text-align:center;
-}
-.hourly-chart-title{
-  font-size:0.82em;color:var(--text-dim);font-weight:700;
-  text-align:center;margin-bottom:8px;
 }
 
 .session-list{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 360px);overflow-y:auto}
@@ -578,6 +597,37 @@ body{
 }
 .setting-btn.danger-btn{color:#c07070}
 .setting-btn.danger-btn:hover{border-color:var(--danger);background:rgba(255,180,180,0.1)}
+
+/* App color settings */
+.app-color-section{
+  margin-top:16px;margin-bottom:16px;
+  background:var(--card-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  box-shadow:var(--card-shadow);
+  padding:16px 20px;
+}
+.app-color-title{
+  font-size:0.92em;font-weight:700;color:var(--text);
+  margin-bottom:12px;text-align:center;
+}
+.app-color-list{display:flex;flex-direction:column;gap:8px}
+.app-color-row{
+  display:flex;align-items:center;gap:10px;
+  font-size:0.85em;color:var(--text);
+}
+.app-color-dot{
+  width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  border:1px solid rgba(0,0,0,0.1);
+}
+.app-color-name{flex:1;font-weight:500}
+.app-color-input{
+  width:32px;height:26px;border:none;border-radius:6px;
+  cursor:pointer;padding:0;background:transparent;
+}
+.app-color-input::-webkit-color-swatch-wrapper{padding:0}
+.app-color-input::-webkit-color-swatch{border:1px solid rgba(0,0,0,0.1);border-radius:4px}
 
 .settings-footer{
   text-align:center;color:var(--text-dim);
@@ -819,8 +869,10 @@ body{
     <div class="page-inner">
       <div class="page-title">&#x4eca;&#x65e5;&#x4f1a;&#x8bdd;</div>
       <div class="page-subtitle">&#x70b9;&#x51fb;&#x4f1a;&#x8bdd;&#x53ef;&#x4ee5;&#x7f16;&#x8f91;&#xff5e;</div>
-      <div class="hourly-chart-title">24&#x5c0f;&#x65f6;&#x4f7f;&#x7528;&#x5206;&#x5e03;</div>
-      <div class="hourly-chart" id="hourlyChart"></div>
+      <button class="hourly-toggle-btn" id="hourlyToggleBtn" onclick="toggleHourlyChart()">&#x67e5;&#x770b;&#x65f6;&#x95f4;&#x5206;&#x5e03;</button>
+      <div class="hourly-wrap" id="hourlyWrap">
+        <div class="hourly-chart" id="hourlyChart"></div>
+      </div>
       <div class="session-list" id="sessionList"><div class="loading" style="height:150px"></div></div>
     </div>
   </div>
@@ -866,7 +918,12 @@ body{
       <button class="setting-btn" onclick="doRefresh()">&#x5237;&#x65b0;&#x6570;&#x636e;</button>
       <button class="setting-btn danger-btn" onclick="resetAll()">&#x91cd;&#x7f6e;&#x6240;&#x6709;</button>
 
-      <div class="settings-footer">&#x5c4f;&#x5e55;&#x65f6;&#x95f4;&#x8ffd;&#x8e2a;&#x5668; v3.0 &#x2661; &#x6bcf;30&#x79d2;&#x81ea;&#x52a8;&#x5237;&#x65b0;</div>
+      <div class="app-color-section">
+        <div class="app-color-title">&#x5e94;&#x7528;&#x989c;&#x8272;</div>
+        <div class="app-color-list" id="appColorList"></div>
+      </div>
+
+      <div class="settings-footer">&#x5c4f;&#x5e55;&#x65f6;&#x95f4;&#x8ffd;&#x8e2a;&#x5668; v3.4 &#x2661; &#x6bcf;30&#x79d2;&#x81ea;&#x52a8;&#x5237;&#x65b0;</div>
     </div>
   </div>
 
@@ -904,9 +961,14 @@ function dotColor(i){ return DOT_COLORS[i % DOT_COLORS.length]; }
 
 const APP_COLORS = ['#4A90D9','#E8556D','#50C878','#F5A623','#9B59B6','#E74C3C','#1ABC9C','#F39C12','#3498DB','#E91E63','#2ECC71','#FF6B35','#8E44AD','#16A085','#D35400','#2980B9'];
 function appColor(name) {
+  const saved = localStorage.getItem('appColor_' + name);
+  if (saved) return saved;
   let h = 0;
   for(let i=0; i<name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
   return APP_COLORS[Math.abs(h) % APP_COLORS.length];
+}
+function setAppColor(name, color) {
+  localStorage.setItem('appColor_' + name, color);
 }
 
 const WEEKDAY_CN = ['\u5468\u65e5','\u5468\u4e00','\u5468\u4e8c','\u5468\u4e09','\u5468\u56db','\u5468\u4e94','\u5468\u516d'];
@@ -1071,6 +1133,9 @@ async function refreshAll(){
       document.getElementById('statTop').textContent='-';
     }
 
+    // Track known apps for color settings
+    trackApps(data.apps.map(a=>a.app));
+
     // App list (Page 2)
     const maxSec=data.apps.length>0?data.apps[0].total_seconds:1;
     document.getElementById('appList').innerHTML=data.apps.map((a,i)=>{
@@ -1201,26 +1266,43 @@ async function loadSessions(){
     ]);
     const data=await res.json();
 
-    // Render hourly timeline chart
+    // Render hourly stacked bar chart with per-app colors
     try{
       const hourlyData=await hourlyRes.json();
       const hours=hourlyData.hours;
-      const maxMins=Math.max(...Object.values(hours).map(h=>(h.total_seconds||0)/60),1);
+      const maxSec=Math.max(...Object.values(hours).map(h=>{
+        const apps=h.apps||{};
+        return Object.values(apps).reduce((a,b)=>a+b,0);
+      }),1);
       let chartHtml='';
       for(let h=0;h<24;h++){
-        const info=hours[h]||{total_seconds:0};
-        const totalMins=(info.total_seconds||0)/60;
-        const barH=Math.max(0,totalMins/maxMins*100);
+        const info=hours[h]||{total_seconds:0,apps:{}};
+        const apps=info.apps||{};
+        const totalSec=Object.values(apps).reduce((a,b)=>a+b,0);
+        const barH=Math.max(0,totalSec/maxSec*160);
         const showLabel=(h%3===0);
-        const gradientStyle=barH>0?'background:linear-gradient(180deg,#4A90D9,#1ABC9C)':'';
+        let segsHtml='';
+        if(totalSec>0){
+          const entries=Object.entries(apps).sort((a,b)=>b[1]-a[1]);
+          for(const [app,secs] of entries){
+            const segH=Math.max(1,secs/totalSec*barH);
+            const color=appColor(app);
+            segsHtml+=`<div class="hourly-seg" style="height:${segH}px;background:${color}" title="${app}: ${Math.round(secs/60)}min"></div>`;
+          }
+        }
         chartHtml+=`<div class="hourly-col">
-          <div class="hourly-bar" style="height:${barH}px"><div class="hourly-seg" style="height:100%;${gradientStyle};border-radius:4px 4px 0 0" title="${h}:00 - ${Math.round(totalMins)}min"></div></div>
+          <div class="hourly-bar" style="height:${barH}px">${segsHtml}</div>
           <div class="hourly-label">${showLabel?h:''}</div>
         </div>`;
       }
       document.getElementById('hourlyChart').innerHTML=chartHtml;
+      // Adapt chart height
+      const chartEl=document.getElementById('hourlyChart');
+      const tallest=Math.max(100,Math.min(200,maxSec/60*2+80));
+      chartEl.style.height=tallest+'px';
     }catch(e){}
 
+    trackApps(data.sessions.map(s=>s.app));
     document.getElementById('sessionList').innerHTML=data.sessions.map((s,i)=>{
       const endStr=s.end?s.end.split(' ').pop():'\u8fdb\u884c\u4e2d';
       const startStr=s.start.split(' ').pop();
@@ -1357,6 +1439,19 @@ async function resetAll(){
   refreshAll();
 }
 
+// ============ Collapsible Hourly Chart ============
+function toggleHourlyChart(){
+  const wrap=document.getElementById('hourlyWrap');
+  const btn=document.getElementById('hourlyToggleBtn');
+  if(wrap.classList.contains('expanded')){
+    wrap.classList.remove('expanded');
+    btn.textContent='\u67e5\u770b\u65f6\u95f4\u5206\u5e03';
+  }else{
+    wrap.classList.add('expanded');
+    btn.textContent='\u6536\u8d77\u65f6\u95f4\u5206\u5e03';
+  }
+}
+
 // ============ History Panels ============
 async function toggleHistory(type){
   const wrapId = type==='charging' ? 'chargingWrap' : 'locationWrap';
@@ -1372,7 +1467,7 @@ async function toggleHistory(type){
 
 async function loadHistory(type){
   const panelId = type==='charging' ? 'chargingHistory' : 'locationHistory';
-  const endpoint = type==='charging' ? '/api/event/charging_history' : '/api/event/location_history';
+  const endpoint = type==='charging' ? '/api/history/charging' : '/api/history/location';
   const panel = document.getElementById(panelId);
   panel.innerHTML='<div class="history-empty">loading...</div>';
   try{
@@ -1404,12 +1499,43 @@ async function loadHistory(type){
 
 async function deleteEvent(id, type){
   try{
-    await fetch(API+'/api/event/delete/'+id,{method:'DELETE'});
+    await fetch(API+'/api/history/delete/'+id,{method:'DELETE'});
     showToast('(*^-^*) \u5df2\u5220\u9664\uff5e');
     await loadHistory(type);
   }catch(e){
     showToast('(>_<) \u5220\u9664\u5931\u8d25...');
   }
+}
+
+// ============ App Color Settings ============
+let knownApps = new Set();
+
+function updateAppColorList(){
+  const list=document.getElementById('appColorList');
+  if(!list||knownApps.size===0) return;
+  list.innerHTML=[...knownApps].sort().map(app=>{
+    const color=appColor(app);
+    return `<div class="app-color-row">
+      <div class="app-color-dot" style="background:${color}" id="dot_${btoa(encodeURIComponent(app))}"></div>
+      <span class="app-color-name">${app}</span>
+      <input type="color" class="app-color-input" value="${color}" onchange="onAppColorChange('${app.replace(/'/g,"\\'")}',this.value,this)">
+    </div>`;
+  }).join('');
+}
+
+function onAppColorChange(app, color, input){
+  setAppColor(app, color);
+  const dotId='dot_'+btoa(encodeURIComponent(app));
+  const dot=document.getElementById(dotId);
+  if(dot) dot.style.background=color;
+}
+
+function trackApps(apps){
+  let changed=false;
+  for(const a of apps){
+    if(!knownApps.has(a)){knownApps.add(a);changed=true;}
+  }
+  if(changed) updateAppColorList();
 }
 
 // ============ Init ============

@@ -38,6 +38,28 @@ async def toggle(request: Request) -> JSONResponse:
     return JSONResponse(result)
 
 
+# --- Charging & location history (must be before wildcard /api/event/{event_type}) ---
+
+@mcp.custom_route("/api/history/charging", methods=["GET"])
+async def charging_history_api(request: Request) -> JSONResponse:
+    return JSONResponse(models.get_charging_history())
+
+
+@mcp.custom_route("/api/history/location", methods=["GET"])
+async def location_history_api(request: Request) -> JSONResponse:
+    return JSONResponse(models.get_location_history())
+
+
+@mcp.custom_route("/api/history/delete/{event_id}", methods=["GET", "DELETE"])
+async def delete_event_route(request: Request) -> JSONResponse:
+    event_id = int(request.path_params["event_id"])
+    from src.db import delete_event
+    result = delete_event(event_id)
+    if result:
+        return JSONResponse({"status": "deleted", "id": result["id"]})
+    return JSONResponse({"error": "event not found"}, status_code=404)
+
+
 # --- Events (charging, location) ---
 
 @mcp.custom_route("/api/event/{event_type}", methods=["GET"])
@@ -147,35 +169,11 @@ async def reset_all(request: Request) -> JSONResponse:
     return JSONResponse(result)
 
 
-# --- Charging & location history for dashboard ---
-
-@mcp.custom_route("/api/event/charging_history", methods=["GET"])
-async def charging_history_api(request: Request) -> JSONResponse:
-    return JSONResponse(models.get_charging_history())
-
-
-@mcp.custom_route("/api/event/location_history", methods=["GET"])
-async def location_history_api(request: Request) -> JSONResponse:
-    return JSONResponse(models.get_location_history())
-
-
 # --- Current status (charging + location) ---
 
 @mcp.custom_route("/api/screentime/status", methods=["GET"])
 async def status_api(request: Request) -> JSONResponse:
     return JSONResponse(models.get_current_status())
-
-
-# --- Delete event ---
-
-@mcp.custom_route("/api/event/delete/{event_id}", methods=["GET", "DELETE"])
-async def delete_event_route(request: Request) -> JSONResponse:
-    event_id = int(request.path_params["event_id"])
-    from src.db import delete_event
-    result = delete_event(event_id)
-    if result:
-        return JSONResponse({"status": "deleted", "id": result["id"]})
-    return JSONResponse({"error": "event not found"}, status_code=404)
 
 
 # --- Dashboard ---

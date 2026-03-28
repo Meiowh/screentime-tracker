@@ -382,14 +382,35 @@ def get_weekly_trend() -> dict:
 # ---------------------------------------------------------------------------
 
 def get_hourly_distribution() -> dict:
-    """24-hour heatmap data."""
+    """24-hour heatmap data with per-app breakdown."""
     rows = db.get_hourly_distribution(TZ_NAME, days_back=7)
-    hours = {h: {"session_count": 0, "total_seconds": 0, "total_formatted": "0m"} for h in range(24)}
+    hours = {h: {"session_count": 0, "total_seconds": 0, "total_formatted": "0m", "apps": {}} for h in range(24)}
     for r in rows:
         h = r["hour"]
         hours[h]["session_count"] = r["session_count"]
         hours[h]["total_seconds"] = r["total_seconds"]
         hours[h]["total_formatted"] = _fmt_duration(r["total_seconds"])
+
+    # Per-app breakdown: iterate sessions, distribute seconds to hours
+    sessions = db.get_sessions_today(TZ_NAME)
+    now = _now()
+    for s in sessions:
+        app = s["app"]
+        start = _to_local(s["start_ts"])
+        end = _to_local(s["end_ts"]) if s["end_ts"] else now
+
+        # Walk through each hour the session spans
+        current = start
+        while current < end:
+            h = current.hour
+            # End of this hour slot
+            next_hour = current.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            slot_end = min(next_hour, end)
+            secs = int((slot_end - current).total_seconds())
+            if secs > 0:
+                hours[h]["apps"][app] = hours[h]["apps"].get(app, 0) + secs
+            current = slot_end
+
     return {"hours": hours, "period": "last 7 days"}
 
 
