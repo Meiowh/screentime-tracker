@@ -419,13 +419,21 @@ body{
 .calendar-cell.has-data{cursor:pointer}
 .calendar-cell.has-data:hover{transform:scale(1.08);box-shadow:0 0 10px rgba(126,200,227,0.2)}
 .calendar-cell.today .cal-today-dot{
-  width:4px;height:4px;border-radius:50%;background:#fff;
+  width:5px;height:5px;border-radius:50%;background:var(--primary);
   margin-top:2px;
+  box-shadow:0 0 4px rgba(126,200,227,0.6);
 }
-.calendar-cell.cl1{background:rgba(126,200,227,0.12);color:var(--text)}
-.calendar-cell.cl2{background:rgba(126,200,227,0.28);color:var(--text)}
-.calendar-cell.cl3{background:rgba(126,200,227,0.48);color:#fff}
-.calendar-cell.cl4{background:rgba(126,200,227,0.72);color:#fff;font-weight:700}
+.calendar-cell.today.cl3 .cal-today-dot,
+.calendar-cell.today.cl4 .cal-today-dot{
+  background:#fff;
+  box-shadow:0 0 4px rgba(255,255,255,0.6);
+}
+.calendar-cell.cl1{background:rgba(126,200,227,0.22);color:var(--text)}
+.calendar-cell.cl2{background:rgba(126,200,227,0.40);color:var(--text)}
+.calendar-cell.cl3{background:rgba(126,200,227,0.58);color:#fff}
+.calendar-cell.cl4{background:rgba(126,200,227,0.78);color:#fff;font-weight:700}
+@keyframes calCellFadeIn{from{opacity:0;transform:translateY(8px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.calendar-cell.animated{animation:calCellFadeIn 0.3s ease backwards}
 .calendar-cell.empty{background:transparent}
 
 .day-report-back{
@@ -991,25 +999,25 @@ body{
             <div class="calendar-day-header">&#x65e5;</div>
           </div>
           <div class="calendar-grid" id="calendarGrid"></div>
+
+          <div style="margin-top:18px;border-top:1px solid var(--card-border);padding-top:14px">
+            <div class="data-card-title">24&#x5c0f;&#x65f6;&#x6d3b;&#x52a8;&#x70ed;&#x529b;&#x56fe;</div>
+            <div class="heatmap" id="heatmap"></div>
+            <div class="heatmap-legend">
+              <span>&#x5c11;</span>
+              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.04)"></div>
+              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.22)"></div>
+              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.40)"></div>
+              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.58)"></div>
+              <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.78)"></div>
+              <span>&#x591a;</span>
+            </div>
+          </div>
         </div>
 
         <div class="data-card">
           <div class="data-card-title">&#x6bcf;&#x5468;&#x5c4f;&#x5e55;&#x65f6;&#x95f4;&#x8d8b;&#x52bf;</div>
           <div class="weekly-chart" id="weeklyChart"></div>
-        </div>
-
-        <div class="data-card">
-          <div class="data-card-title">24&#x5c0f;&#x65f6;&#x6d3b;&#x52a8;&#x70ed;&#x529b;&#x56fe;</div>
-          <div class="heatmap" id="heatmap"></div>
-          <div class="heatmap-legend">
-            <span>&#x5c11;</span>
-            <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.04)"></div>
-            <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.12)"></div>
-            <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.28)"></div>
-            <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.48)"></div>
-            <div class="heatmap-legend-cell" style="background:rgba(126,200,227,0.72)"></div>
-            <span>&#x591a;</span>
-          </div>
         </div>
       </div>
 
@@ -1096,9 +1104,14 @@ body{
           <input type="range" id="wmSize" min="50" max="200" value="100" oninput="onWatermarkChange();document.getElementById('wmSizeVal').textContent=this.value+'%'">
           <span class="wm-val" id="wmSizeVal">100%</span>
         </div>
+        <div class="watermark-row" style="flex-direction:column;align-items:stretch;gap:6px">
+          <label>&#x5185;&#x5bb9;</label>
+          <input type="text" id="wmContent" style="width:100%;padding:8px 12px;border-radius:12px;border:1px solid var(--card-border);background:rgba(255,255,255,0.6);color:var(--text);font-size:0.85em;font-family:'Zen Maru Gothic',sans-serif" placeholder="(>_<), (*^-^*), (=^-^=), ..." oninput="onWatermarkChange()">
+          <span style="font-size:0.72em;color:var(--text-dim)">&#x7528;&#x82f1;&#x6587;&#x9017;&#x53f7;&#x5206;&#x9694;&#xff0c;&#x7559;&#x7a7a;&#x7528;&#x9ed8;&#x8ba4;</span>
+        </div>
       </div>
 
-      <div class="settings-footer">&#x5c4f;&#x5e55;&#x65f6;&#x95f4;&#x8ffd;&#x8e2a;&#x5668; v3.4 &#x2661; &#x6bcf;30&#x79d2;&#x81ea;&#x52a8;&#x5237;&#x65b0;</div>
+      <div class="settings-footer">&#x5c4f;&#x5e55;&#x65f6;&#x95f4;&#x8ffd;&#x8e2a;&#x5668; v3.5.1 &#x2661; &#x6bcf;30&#x79d2;&#x81ea;&#x52a8;&#x5237;&#x65b0;</div>
     </div>
   </div>
 
@@ -1857,22 +1870,25 @@ function renderCalendarGrid(){
   let html='';
   // Empty cells before first day
   for(let i=0;i<startDow;i++){
-    html+='<div class="calendar-cell empty"></div>';
+    html+=`<div class="calendar-cell empty animated" style="animation-delay:${i*0.02}s"></div>`;
   }
   for(let d=1;d<=daysInMonth;d++){
     const dateStr=calYear+'-'+String(calMonth).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const dayData=days[dateStr];
     const isToday=dateStr===todayStr;
     const sec=dayData?dayData.total_seconds||0:0;
-    const ratio=sec/maxSec;
+    // Use non-linear scaling: 0.2 + 0.8 * ratio, so any data is clearly visible
+    const rawRatio=sec/maxSec;
+    const ratio=sec>0?(0.2+0.8*rawRatio):0;
     let level='';
     if(ratio>0.75) level='cl4';
     else if(ratio>0.5) level='cl3';
     else if(ratio>0.25) level='cl2';
     else if(ratio>0) level='cl1';
     const hasData=sec>0;
+    const cellIdx=startDow+d-1;
     const onClick=hasData?`onclick="showDayReport('${dateStr}')"`:''
-    html+=`<div class="calendar-cell ${level} ${isToday?'today':''} ${hasData?'has-data':''}" ${onClick}>
+    html+=`<div class="calendar-cell animated ${level} ${isToday?'today':''} ${hasData?'has-data':''}" style="animation-delay:${cellIdx*0.02}s" ${onClick}>
       ${d}${isToday?'<div class="cal-today-dot"></div>':''}
     </div>`;
   }
@@ -1949,9 +1965,11 @@ function onWatermarkChange(){
   const color=document.getElementById('wmColor').value;
   const opacity=document.getElementById('wmOpacity').value;
   const size=document.getElementById('wmSize').value;
+  const content=(document.getElementById('wmContent')||{}).value||'';
   localStorage.setItem('watermark_color',color);
   localStorage.setItem('watermark_opacity',opacity);
   localStorage.setItem('watermark_size',size);
+  localStorage.setItem('watermark_content',content);
   applyWatermarkSettings();
 }
 
@@ -1959,22 +1977,36 @@ function applyWatermarkSettings(){
   const color=localStorage.getItem('watermark_color')||'#3a5068';
   const opacity=parseInt(localStorage.getItem('watermark_opacity')||'100',10);
   const size=parseInt(localStorage.getItem('watermark_size')||'100',10);
+  const content=localStorage.getItem('watermark_content')||'';
   const spans=document.querySelectorAll('.kaomoji-bg span');
-  spans.forEach(sp=>{
+  const kaomojiList=content?content.split(',').map(s=>s.trim()).filter(Boolean):[];
+  spans.forEach((sp,idx)=>{
     sp.style.color=color;
     sp.style.opacity=(opacity/100).toString();
-    sp.style.transform=sp.style.transform.replace(/scale\([^)]*\)/g,'');
-    if(size!==100){
-      sp.style.transform=(sp.style.transform||'')+' scale('+(size/100)+')';
+    // Preserve original rotation, only update scale
+    const origRotate=sp.getAttribute('data-orig-rotate');
+    if(!origRotate){
+      // Extract and save original rotation from inline style
+      const m=sp.style.transform.match(/rotate\([^)]*\)/);
+      sp.setAttribute('data-orig-rotate', m?m[0]:'');
+    }
+    const rot=sp.getAttribute('data-orig-rotate')||'';
+    const scl=size!==100?' scale('+(size/100)+')':'';
+    sp.style.transform=rot+scl;
+    // Update content if custom kaomoji set
+    if(kaomojiList.length>0){
+      sp.textContent=kaomojiList[idx%kaomojiList.length];
     }
   });
   // Sync inputs if they exist
   const cEl=document.getElementById('wmColor');
   const oEl=document.getElementById('wmOpacity');
   const sEl=document.getElementById('wmSize');
+  const tEl=document.getElementById('wmContent');
   if(cEl) cEl.value=color;
   if(oEl){oEl.value=opacity;const ov=document.getElementById('wmOpacityVal');if(ov)ov.textContent=opacity+'%';}
   if(sEl){sEl.value=size;const sv=document.getElementById('wmSizeVal');if(sv)sv.textContent=size+'%';}
+  if(tEl&&content) tEl.value=content;
 }
 
 // ============ Init ============
