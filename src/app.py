@@ -15,17 +15,6 @@ from src.dashboard import render_dashboard
 
 mcp = FastMCP("Screen Time", host="0.0.0.0", port=PORT)
 
-# Cache the dashboard HTML (it's a static string)
-_DASHBOARD_HTML: str | None = None
-
-
-def _dashboard():
-    global _DASHBOARD_HTML
-    if _DASHBOARD_HTML is None:
-        _DASHBOARD_HTML = render_dashboard()
-    return _DASHBOARD_HTML
-
-
 # =========================================================================
 # HTTP Routes
 # =========================================================================
@@ -170,11 +159,30 @@ async def location_history_api(request: Request) -> JSONResponse:
     return JSONResponse(models.get_location_history())
 
 
+# --- Current status (charging + location) ---
+
+@mcp.custom_route("/api/screentime/status", methods=["GET"])
+async def status_api(request: Request) -> JSONResponse:
+    return JSONResponse(models.get_current_status())
+
+
+# --- Delete event ---
+
+@mcp.custom_route("/api/event/delete/{event_id}", methods=["GET", "DELETE"])
+async def delete_event_route(request: Request) -> JSONResponse:
+    event_id = int(request.path_params["event_id"])
+    from src.db import delete_event
+    result = delete_event(event_id)
+    if result:
+        return JSONResponse({"status": "deleted", "id": result["id"]})
+    return JSONResponse({"error": "event not found"}, status_code=404)
+
+
 # --- Dashboard ---
 
 @mcp.custom_route("/dashboard", methods=["GET"])
 async def dashboard(request: Request) -> HTMLResponse:
-    return HTMLResponse(_dashboard())
+    return HTMLResponse(render_dashboard())
 
 
 # =========================================================================

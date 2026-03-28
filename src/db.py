@@ -333,3 +333,35 @@ def get_events_by_type_today(event_type: str, tz_name: str):
             (event_type, tz_name, tz_name),
         )
         return [dict(r) for r in cur.fetchall()]
+
+
+def get_events_by_types_recent(types: list[str], days: int = 3):
+    """Return events matching any of the given types from the last N days, newest first."""
+    with get_cursor() as cur:
+        cur.execute(
+            """SELECT * FROM events
+             WHERE type = ANY(%s)
+               AND ts >= NOW() - make_interval(days => %s)
+             ORDER BY ts DESC""",
+            (types, days),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_latest_event_by_type(event_type: str):
+    """Return the single most recent event of the given type, or None."""
+    with get_cursor() as cur:
+        cur.execute(
+            "SELECT * FROM events WHERE type = %s ORDER BY ts DESC LIMIT 1",
+            (event_type,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def delete_event(event_id: int):
+    """Delete an event by id."""
+    with get_cursor() as cur:
+        cur.execute("DELETE FROM events WHERE id = %s RETURNING id", (event_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None

@@ -455,32 +455,62 @@ def app_open_count(app_name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_charging_history() -> dict:
-    """Recent charging events."""
-    events = db.get_events_recent(50)
-    charging = [e for e in events if e["type"] in ("charging_start", "charging_stop")]
+    """Last 3 days of charging events."""
+    events = db.get_events_by_types_recent(["charging_start", "charging_stop"], days=3)
     return {
         "events": [
             {
+                "id": e["id"],
                 "type": e["type"],
                 "time": _to_local(e["ts"]).strftime("%Y-%m-%d %H:%M:%S"),
             }
-            for e in charging[:20]
+            for e in events
         ]
     }
 
 
 def get_location_history() -> dict:
-    """Recent location events."""
-    events = db.get_events_recent(50)
-    location = [e for e in events if e["type"] in ("left_home", "arrived_home")]
+    """Last 3 days of location events."""
+    events = db.get_events_by_types_recent(["left_home", "arrived_home"], days=3)
     return {
         "events": [
             {
+                "id": e["id"],
                 "type": e["type"],
                 "time": _to_local(e["ts"]).strftime("%Y-%m-%d %H:%M:%S"),
             }
-            for e in location[:20]
+            for e in events
         ]
+    }
+
+
+def get_current_status() -> dict:
+    """Current charging and location state based on the latest event of each type."""
+    last_charging = db.get_latest_event_by_type("charging_start")
+    last_uncharging = db.get_latest_event_by_type("charging_stop")
+
+    # Determine charging: whichever event is more recent wins
+    if last_charging and last_uncharging:
+        charging = last_charging["ts"] > last_uncharging["ts"]
+    elif last_charging:
+        charging = True
+    else:
+        charging = False
+
+    last_arrived = db.get_latest_event_by_type("arrived_home")
+    last_left = db.get_latest_event_by_type("left_home")
+
+    # Determine at_home: whichever event is more recent wins
+    if last_arrived and last_left:
+        at_home = last_arrived["ts"] > last_left["ts"]
+    elif last_arrived:
+        at_home = True
+    else:
+        at_home = False
+
+    return {
+        "charging": charging,
+        "at_home": at_home,
     }
 
 

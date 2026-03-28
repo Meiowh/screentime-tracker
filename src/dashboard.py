@@ -9,7 +9,7 @@ def render_dashboard() -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>macaron day</title>
+<title>☁️ 屏幕状态追踪♡</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
@@ -18,9 +18,9 @@ def render_dashboard() -> str:
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
 :root{
-  --bg-start:#f8fcff;
-  --bg-mid:#e8f4fd;
-  --bg-end:#e0f5f0;
+  --bg-start:#d4e8f5;
+  --bg-mid:#b8d8ee;
+  --bg-end:#a8d0e0;
   --card-bg:rgba(255,255,255,0.65);
   --card-border:rgba(180,220,245,0.4);
   --card-shadow:0 8px 32px rgba(120,180,220,0.15);
@@ -64,13 +64,13 @@ body{
 }
 .kaomoji-bg span{
   position:absolute;
-  color:var(--text-light);
+  color:rgba(255,255,255,0.18);
   font-family:'Zen Maru Gothic',sans-serif;
   animation:kaomojiFade 30s ease-in-out infinite;
 }
 @keyframes kaomojiFade{
   0%,100%{transform:translateY(0);opacity:var(--kao-op)}
-  50%{transform:translateY(-12px);opacity:calc(var(--kao-op) * 0.6)}
+  50%{transform:translateY(-12px);opacity:calc(var(--kao-op) * 0.7)}
 }
 
 /* Animations */
@@ -256,6 +256,33 @@ body{
 .stat-card:nth-child(4) .stat-value{animation-delay:0.39s}
 .stat-label{font-size:0.75em;color:var(--text-dim);margin-top:6px;font-weight:500}
 
+/* Status pills row */
+.status-pills{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:16px;
+}
+.status-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:50px;
+  font-size:0.78em;font-weight:600;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--card-border);
+  background:var(--card-bg);
+  box-shadow:0 2px 12px rgba(120,180,220,0.1);
+  transition:all 0.3s ease;
+}
+.status-pill .pill-dot{
+  width:7px;height:7px;border-radius:50%;
+}
+.status-pill.charging-on{border-color:rgba(142,228,175,0.4);color:#4a8a6a}
+.status-pill.charging-on .pill-dot{background:var(--success);animation:livePulse 2s ease infinite}
+.status-pill.charging-off{border-color:rgba(255,180,180,0.3);color:var(--text-dim)}
+.status-pill.charging-off .pill-dot{background:var(--text-dim)}
+.status-pill.loc-home{border-color:rgba(126,200,227,0.4);color:#4a7a8a}
+.status-pill.loc-home .pill-dot{background:var(--primary);animation:livePulse 2s ease infinite}
+.status-pill.loc-away{border-color:rgba(255,228,160,0.4);color:#7a6830}
+.status-pill.loc-away .pill-dot{background:var(--warning)}
+
 /* Longest session card */
 .longest-card{
   background:var(--card-bg);
@@ -367,7 +394,39 @@ body{
 .week-bar-label.today{color:var(--primary);font-weight:700}
 
 /* ============ PAGE 4: Sessions ============ */
-.session-list{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 200px);overflow-y:auto}
+/* Hourly timeline chart */
+.hourly-chart{
+  display:flex;align-items:flex-end;gap:2px;
+  height:120px;padding:12px 0 4px;
+  margin-bottom:16px;
+  background:var(--card-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--card-border);
+  border-radius:24px;
+  box-shadow:var(--card-shadow);
+  padding:16px 10px 8px;
+}
+.hourly-col{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  height:100%;position:relative;
+}
+.hourly-bar{
+  width:100%;border-radius:4px 4px 0 0;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  min-height:0;transition:height 0.3s ease;
+  overflow:hidden;
+}
+.hourly-seg{width:100%;min-height:1px}
+.hourly-label{
+  font-size:0.55em;color:var(--text-dim);margin-top:3px;font-weight:500;
+  text-align:center;
+}
+.hourly-chart-title{
+  font-size:0.82em;color:var(--text-dim);font-weight:700;
+  text-align:center;margin-bottom:8px;
+}
+
+.session-list{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 360px);overflow-y:auto}
 .session-item{
   padding:14px 16px;
   background:var(--card-bg);
@@ -455,6 +514,47 @@ body{
   transition:left 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
 .toggle.on .toggle-thumb{left:26px}
+
+/* History panel */
+.setting-row-wrap{margin-bottom:12px}
+.setting-row-wrap .setting-row{margin-bottom:0;border-radius:20px 20px 20px 20px}
+.setting-row-wrap.expanded .setting-row{border-radius:20px 20px 0 0;margin-bottom:0}
+.history-btn{
+  background:none;border:none;cursor:pointer;padding:4px 8px;
+  font-size:0.75em;color:var(--text-dim);font-weight:500;
+  border-radius:8px;transition:all 0.2s;
+  font-family:'Zen Maru Gothic',sans-serif;
+}
+.history-btn:hover{background:rgba(126,200,227,0.1);color:var(--primary)}
+.history-panel{
+  max-height:0;overflow:hidden;opacity:0;
+  transition:max-height 0.35s ease,opacity 0.3s ease;
+  background:var(--card-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--card-border);border-top:none;
+  border-radius:0 0 20px 20px;
+  box-shadow:var(--card-shadow);
+}
+.setting-row-wrap.expanded .history-panel{
+  max-height:400px;opacity:1;overflow-y:auto;
+}
+.history-event{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;border-bottom:1px solid rgba(180,220,245,0.15);
+  font-size:0.8em;
+}
+.history-event:last-child{border-bottom:none}
+.history-event-info{display:flex;flex-direction:column;gap:2px}
+.history-event-type{font-weight:600;color:var(--text)}
+.history-event-time{font-size:0.85em;color:var(--text-dim)}
+.history-del-btn{
+  background:none;border:1px solid rgba(255,180,180,0.3);
+  color:#c07070;padding:4px 10px;border-radius:50px;
+  font-size:0.78em;cursor:pointer;transition:all 0.2s;
+  font-family:'Zen Maru Gothic',sans-serif;
+}
+.history-del-btn:hover{background:rgba(255,180,180,0.1);border-color:var(--danger)}
+.history-empty{padding:16px;text-align:center;color:var(--text-dim);font-size:0.82em}
 
 /* Settings buttons */
 .setting-btn{
@@ -556,36 +656,36 @@ body{
 
 <!-- Kaomoji watermark layer -->
 <div class="kaomoji-bg">
-  <span style="top:5%;left:8%;font-size:18px;--kao-op:0.04;animation-delay:0s;transform:rotate(-8deg)">&#x2768;&#x1d22;&#x2027;&#x203b;&#x2027;&#x1d22;&#x2769;</span>
-  <span style="top:12%;right:12%;font-size:24px;--kao-op:0.035;animation-delay:-4s;transform:rotate(5deg)">&#x17b7;&gt;&#x1d17;&lt;&#x17b7;</span>
-  <span style="top:22%;left:20%;font-size:16px;--kao-op:0.045;animation-delay:-8s;transform:rotate(-3deg)">&#x10ae;&#x2082;&#x207d;&#x5e;&#x02f6;&#x2a01;&#x0337;&#x035d;&#x2a01;&#x02f6;&#x5e;&#x2082;&#x29;&#x25de;</span>
-  <span style="top:30%;right:6%;font-size:20px;--kao-op:0.04;animation-delay:-2s;transform:rotate(10deg)">&#x2cb;&#x207e;&#x2310;&#x2019;&#x0348;&#x0020;&#x0245;&#x0020;&#x2010;&#x0348;&#x207e;&#x2cb;</span>
-  <span style="top:40%;left:5%;font-size:30px;--kao-op:0.03;animation-delay:-6s;transform:rotate(-12deg)">/&#x1d20; - &#x02d5; -&#x30de;</span>
-  <span style="top:48%;right:18%;font-size:14px;--kao-op:0.05;animation-delay:-10s;transform:rotate(7deg)">&#x2cb6;&#x2461;&#xff65;-&#xff65;&#x2461;&#x10d0;</span>
-  <span style="top:55%;left:25%;font-size:22px;--kao-op:0.035;animation-delay:-14s;transform:rotate(-5deg)">&#x2036; &#x1dbb; &#x1d97; &#x1d17;</span>
-  <span style="top:62%;right:8%;font-size:28px;--kao-op:0.04;animation-delay:-3s;transform:rotate(15deg)">&#x2cb;&#x207e;&#x2310;&#x2019;&#x0348;&#x0020;&#x0245;&#x0020;&#x2010;&#x0348;&#x207e;&#x2cb;</span>
-  <span style="top:70%;left:12%;font-size:16px;--kao-op:0.045;animation-delay:-7s;transform:rotate(-10deg)">&#x17b7;&gt;&#x1d17;&lt;&#x17b7;</span>
-  <span style="top:78%;right:22%;font-size:18px;--kao-op:0.03;animation-delay:-11s;transform:rotate(3deg)">/&#x1d20; - &#x02d5; -&#x30de;</span>
-  <span style="top:85%;left:6%;font-size:40px;--kao-op:0.03;animation-delay:-5s;transform:rotate(8deg)">&#x2768;&#x1d22;&#x2027;&#x203b;&#x2027;&#x1d22;&#x2769;</span>
-  <span style="top:90%;right:10%;font-size:15px;--kao-op:0.04;animation-delay:-9s;transform:rotate(-6deg)">&#x2cb6;&#x2461;&#xff65;-&#xff65;&#x2461;&#x10d0;</span>
-  <span style="top:18%;left:55%;font-size:20px;--kao-op:0.035;animation-delay:-13s;transform:rotate(12deg)">&#x2036; &#x1dbb; &#x1d97; &#x1d17;</span>
-  <span style="top:35%;left:45%;font-size:16px;--kao-op:0.04;animation-delay:-1s;transform:rotate(-15deg)">&#x10ae;&#x2082;&#x207d;&#x5e;&#x02f6;&#x2a01;&#x0337;&#x035d;&#x2a01;&#x02f6;&#x5e;&#x2082;&#x29;&#x25de;</span>
-  <span style="top:52%;left:60%;font-size:24px;--kao-op:0.03;animation-delay:-12s;transform:rotate(6deg)">/&#x1d20; - &#x02d5; -&#x30de;</span>
-  <span style="top:68%;left:50%;font-size:18px;--kao-op:0.045;animation-delay:-15s;transform:rotate(-4deg)">&#x17b7;&gt;&#x1d17;&lt;&#x17b7;</span>
-  <span style="top:82%;left:40%;font-size:22px;--kao-op:0.035;animation-delay:-8s;transform:rotate(9deg)">&#x2cb6;&#x2461;&#xff65;-&#xff65;&#x2461;&#x10d0;</span>
-  <span style="top:8%;left:70%;font-size:14px;--kao-op:0.05;animation-delay:-16s;transform:rotate(-7deg)">&#x2768;&#x1d22;&#x2027;&#x203b;&#x2027;&#x1d22;&#x2769;</span>
-  <span style="top:44%;left:80%;font-size:26px;--kao-op:0.03;animation-delay:-6s;transform:rotate(11deg)">&#x2036; &#x1dbb; &#x1d97; &#x1d17;</span>
-  <span style="top:75%;left:70%;font-size:17px;--kao-op:0.04;animation-delay:-10s;transform:rotate(-13deg)">/&#x1d20; - &#x02d5; -&#x30de;</span>
-  <span style="top:95%;left:55%;font-size:20px;--kao-op:0.035;animation-delay:-4s;transform:rotate(4deg)">&#x17b7;&gt;&#x1d17;&lt;&#x17b7;</span>
-  <span style="top:3%;left:40%;font-size:15px;--kao-op:0.04;animation-delay:-7s;transform:rotate(-9deg)">&#x2cb6;&#x2461;&#xff65;-&#xff65;&#x2461;&#x10d0;</span>
-  <span style="top:58%;left:3%;font-size:19px;--kao-op:0.035;animation-delay:-2s;transform:rotate(14deg)">&#x10ae;&#x2082;&#x207d;&#x5e;&#x02f6;&#x2a01;&#x0337;&#x035d;&#x2a01;&#x02f6;&#x5e;&#x2082;&#x29;&#x25de;</span>
-  <span style="top:25%;right:3%;font-size:32px;--kao-op:0.03;animation-delay:-11s;transform:rotate(-2deg)">&#x2768;&#x1d22;&#x2027;&#x203b;&#x2027;&#x1d22;&#x2769;</span>
-  <span style="top:15%;left:35%;font-size:14px;--kao-op:0.045;animation-delay:-14s;transform:rotate(8deg)">&#x2036; &#x1dbb; &#x1d97; &#x1d17;</span>
-  <span style="top:65%;right:30%;font-size:20px;--kao-op:0.04;animation-delay:-3s;transform:rotate(-11deg)">/&#x1d20; - &#x02d5; -&#x30de;</span>
-  <span style="top:88%;left:22%;font-size:16px;--kao-op:0.035;animation-delay:-9s;transform:rotate(6deg)">&#x17b7;&gt;&#x1d17;&lt;&#x17b7;</span>
-  <span style="top:38%;right:35%;font-size:18px;--kao-op:0.04;animation-delay:-5s;transform:rotate(-8deg)">&#x2cb6;&#x2461;&#xff65;-&#xff65;&#x2461;&#x10d0;</span>
-  <span style="top:73%;left:85%;font-size:14px;--kao-op:0.05;animation-delay:-12s;transform:rotate(3deg)">&#x2036; &#x1dbb; &#x1d97; &#x1d17;</span>
-  <span style="top:50%;left:92%;font-size:22px;--kao-op:0.03;animation-delay:-1s;transform:rotate(-6deg)">&#x10ae;&#x2082;&#x207d;&#x5e;&#x02f6;&#x2a01;&#x0337;&#x035d;&#x2a01;&#x02f6;&#x5e;&#x2082;&#x29;&#x25de;</span>
+  <span style="top:5%;left:8%;font-size:18px;--kao-op:0.14;animation-delay:0s;transform:rotate(-8deg)">(>_<)</span>
+  <span style="top:12%;right:12%;font-size:24px;--kao-op:0.13;animation-delay:-4s;transform:rotate(5deg)">(*^-^*)</span>
+  <span style="top:22%;left:20%;font-size:16px;--kao-op:0.16;animation-delay:-8s;transform:rotate(-3deg)">(=^-^=)</span>
+  <span style="top:30%;right:6%;font-size:20px;--kao-op:0.14;animation-delay:-2s;transform:rotate(10deg)">(-_-) zzz</span>
+  <span style="top:40%;left:5%;font-size:30px;--kao-op:0.12;animation-delay:-6s;transform:rotate(-12deg)">(^o^)/</span>
+  <span style="top:48%;right:18%;font-size:14px;--kao-op:0.18;animation-delay:-10s;transform:rotate(7deg)">(*^_^*)</span>
+  <span style="top:55%;left:25%;font-size:22px;--kao-op:0.13;animation-delay:-14s;transform:rotate(-5deg)">(>_<)</span>
+  <span style="top:62%;right:8%;font-size:28px;--kao-op:0.14;animation-delay:-3s;transform:rotate(15deg)">(*^-^*)</span>
+  <span style="top:70%;left:12%;font-size:16px;--kao-op:0.16;animation-delay:-7s;transform:rotate(-10deg)">(=^-^=)</span>
+  <span style="top:78%;right:22%;font-size:18px;--kao-op:0.12;animation-delay:-11s;transform:rotate(3deg)">(-_-) zzz</span>
+  <span style="top:85%;left:6%;font-size:40px;--kao-op:0.12;animation-delay:-5s;transform:rotate(8deg)">(^o^)/</span>
+  <span style="top:90%;right:10%;font-size:15px;--kao-op:0.15;animation-delay:-9s;transform:rotate(-6deg)">(*^_^*)</span>
+  <span style="top:18%;left:55%;font-size:20px;--kao-op:0.13;animation-delay:-13s;transform:rotate(12deg)">(>_<)</span>
+  <span style="top:35%;left:45%;font-size:16px;--kao-op:0.14;animation-delay:-1s;transform:rotate(-15deg)">(=^-^=)</span>
+  <span style="top:52%;left:60%;font-size:24px;--kao-op:0.12;animation-delay:-12s;transform:rotate(6deg)">(-_-) zzz</span>
+  <span style="top:68%;left:50%;font-size:18px;--kao-op:0.16;animation-delay:-15s;transform:rotate(-4deg)">(*^-^*)</span>
+  <span style="top:82%;left:40%;font-size:22px;--kao-op:0.13;animation-delay:-8s;transform:rotate(9deg)">(^o^)/</span>
+  <span style="top:8%;left:70%;font-size:14px;--kao-op:0.18;animation-delay:-16s;transform:rotate(-7deg)">(*^_^*)</span>
+  <span style="top:44%;left:80%;font-size:26px;--kao-op:0.12;animation-delay:-6s;transform:rotate(11deg)">(>_<)</span>
+  <span style="top:75%;left:70%;font-size:17px;--kao-op:0.14;animation-delay:-10s;transform:rotate(-13deg)">(=^-^=)</span>
+  <span style="top:95%;left:55%;font-size:20px;--kao-op:0.13;animation-delay:-4s;transform:rotate(4deg)">(-_-) zzz</span>
+  <span style="top:3%;left:40%;font-size:15px;--kao-op:0.15;animation-delay:-7s;transform:rotate(-9deg)">(^o^)/</span>
+  <span style="top:58%;left:3%;font-size:19px;--kao-op:0.13;animation-delay:-2s;transform:rotate(14deg)">(*^-^*)</span>
+  <span style="top:25%;right:3%;font-size:32px;--kao-op:0.12;animation-delay:-11s;transform:rotate(-2deg)">(*^_^*)</span>
+  <span style="top:15%;left:35%;font-size:14px;--kao-op:0.16;animation-delay:-14s;transform:rotate(8deg)">(>_<)</span>
+  <span style="top:65%;right:30%;font-size:20px;--kao-op:0.14;animation-delay:-3s;transform:rotate(-11deg)">(=^-^=)</span>
+  <span style="top:88%;left:22%;font-size:16px;--kao-op:0.13;animation-delay:-9s;transform:rotate(6deg)">(-_-) zzz</span>
+  <span style="top:38%;right:35%;font-size:18px;--kao-op:0.15;animation-delay:-5s;transform:rotate(-8deg)">(^o^)/</span>
+  <span style="top:73%;left:85%;font-size:14px;--kao-op:0.18;animation-delay:-12s;transform:rotate(3deg)">(*^_^*)</span>
+  <span style="top:50%;left:92%;font-size:22px;--kao-op:0.12;animation-delay:-1s;transform:rotate(-6deg)">(>_<)</span>
 </div>
 
 <!-- =============== PAGES =============== -->
@@ -621,7 +721,7 @@ body{
         <div class="current-duration" id="currentDur">--</div>
       </div>
 
-      <div class="idle-message" id="idleMessage">&#x6ca1;&#x6709;&#x5728;&#x4f7f;&#x7528;&#x624b;&#x673a;&#x5462; &#x2768;&#x1d22;&#x2027;&#x203b;&#x2027;&#x1d22;&#x2769;</div>
+      <div class="idle-message" id="idleMessage">&#x6ca1;&#x6709;&#x5728;&#x4f7f;&#x7528;&#x624b;&#x673a;&#x5462; (*^_^*)</div>
 
       <!-- Stats Grid 2x2 -->
       <div class="stats-grid" id="statsGrid">
@@ -652,6 +752,18 @@ body{
           </div>
           <div class="stat-value" id="statTop">--</div>
           <div class="stat-label" id="statTopLabel">&#x6700;&#x5e38;&#x7528;</div>
+        </div>
+      </div>
+
+      <!-- Status Pills -->
+      <div class="status-pills" id="statusPills">
+        <div class="status-pill charging-off" id="chargingPill">
+          <span class="pill-dot"></span>
+          <span id="chargingPillText">&#x672a;&#x5145;&#x7535;</span>
+        </div>
+        <div class="status-pill loc-away" id="locationPill">
+          <span class="pill-dot"></span>
+          <span id="locationPillText">&#x5916;&#x51fa;</span>
         </div>
       </div>
 
@@ -706,6 +818,8 @@ body{
     <div class="page-inner">
       <div class="page-title">&#x4eca;&#x65e5;&#x4f1a;&#x8bdd;</div>
       <div class="page-subtitle">&#x70b9;&#x51fb;&#x4f1a;&#x8bdd;&#x53ef;&#x4ee5;&#x7f16;&#x8f91;&#xff5e;</div>
+      <div class="hourly-chart-title">24&#x5c0f;&#x65f6;&#x4f7f;&#x7528;&#x5206;&#x5e03;</div>
+      <div class="hourly-chart" id="hourlyChart"></div>
       <div class="session-list" id="sessionList"><div class="loading" style="height:150px"></div></div>
     </div>
   </div>
@@ -716,24 +830,36 @@ body{
       <div class="page-title">&#x8bbe;&#x7f6e;</div>
       <div class="page-subtitle">&#x529f;&#x80fd;&#x63a7;&#x5236;&#xff5e;</div>
 
-      <div class="setting-row">
-        <div class="setting-label">
-          <svg viewBox="0 0 24 24"><path d="M6.7 17.3l-3.4 1.2 1.2-3.4L17.3 2.3a1.4 1.4 0 0 1 2 0l1.4 1.4a1.4 1.4 0 0 1 0 2z"/><line x1="13" y1="6" x2="18" y2="11"/></svg>
-          &#x5145;&#x7535;&#x72b6;&#x6001;
+      <div class="setting-row-wrap" id="chargingWrap">
+        <div class="setting-row">
+          <div class="setting-label">
+            <svg viewBox="0 0 24 24"><path d="M6.7 17.3l-3.4 1.2 1.2-3.4L17.3 2.3a1.4 1.4 0 0 1 2 0l1.4 1.4a1.4 1.4 0 0 1 0 2z"/><line x1="13" y1="6" x2="18" y2="11"/></svg>
+            &#x5145;&#x7535;&#x72b6;&#x6001;
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="history-btn" onclick="event.stopPropagation();toggleHistory('charging')">&#x5386;&#x53f2;</button>
+            <button class="toggle" id="chargingToggle" onclick="toggleCharging()">
+              <div class="toggle-thumb"></div>
+            </button>
+          </div>
         </div>
-        <button class="toggle" id="chargingToggle" onclick="toggleCharging()">
-          <div class="toggle-thumb"></div>
-        </button>
+        <div class="history-panel" id="chargingHistory"></div>
       </div>
 
-      <div class="setting-row">
-        <div class="setting-label">
-          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          &#x5728;&#x5bb6;
+      <div class="setting-row-wrap" id="locationWrap">
+        <div class="setting-row">
+          <div class="setting-label">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            &#x5728;&#x5bb6;
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="history-btn" onclick="event.stopPropagation();toggleHistory('location')">&#x5386;&#x53f2;</button>
+            <button class="toggle" id="locationToggle" onclick="toggleLocation()">
+              <div class="toggle-thumb"></div>
+            </button>
+          </div>
         </div>
-        <button class="toggle" id="locationToggle" onclick="toggleLocation()">
-          <div class="toggle-thumb"></div>
-        </button>
+        <div class="history-panel" id="locationHistory"></div>
       </div>
 
       <button class="setting-btn" onclick="doRefresh()">&#x5237;&#x65b0;&#x6570;&#x636e;</button>
@@ -774,6 +900,13 @@ const API = window.location.origin;
 
 const DOT_COLORS = ['#7ec8e3','#a8e6cf','#ffc0cb','#ffe4a0','#8ee4af','#b8e4f0','#ffd6e0','#c8e6ff'];
 function dotColor(i){ return DOT_COLORS[i % DOT_COLORS.length]; }
+
+const APP_COLORS = ['#7ec8e3','#a8e6cf','#ffc0cb','#ffe4a0','#b8e4f0','#ffb4b4','#c5e8b0','#e8c5e0','#a0d8ef','#f0c8a0'];
+function appColor(name) {
+  let h = 0;
+  for(let i=0; i<name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+  return APP_COLORS[Math.abs(h) % APP_COLORS.length];
+}
 
 const WEEKDAY_CN = ['\u5468\u65e5','\u5468\u4e00','\u5468\u4e8c','\u5468\u4e09','\u5468\u56db','\u5468\u4e94','\u5468\u516d'];
 
@@ -942,7 +1075,7 @@ async function refreshAll(){
     document.getElementById('appList').innerHTML=data.apps.map((a,i)=>{
       const isActive=a.status==='active';
       const pct=Math.max(2,a.total_seconds/maxSec*100);
-      const dc=dotColor(i);
+      const dc=appColor(a.app);
       return `<div class="app-row ${isActive?'active-session':''}" style="animation-delay:${i*0.05}s">
         <div class="app-dot" style="background:${dc}"></div>
         <div class="app-info">
@@ -995,6 +1128,46 @@ async function refreshAll(){
         lt.classList.toggle('on', locationOn);
       }
     }catch(e){}
+
+    // Update status pills on home page
+    try{
+      const statusRes=await fetch(API+'/api/screentime/status');
+      const statusData=await statusRes.json();
+      const cPill=document.getElementById('chargingPill');
+      const lPill=document.getElementById('locationPill');
+      if(statusData.charging){
+        cPill.className='status-pill charging-on';
+        document.getElementById('chargingPillText').textContent='\u5145\u7535\u4e2d';
+      } else {
+        cPill.className='status-pill charging-off';
+        document.getElementById('chargingPillText').textContent='\u672a\u5145\u7535';
+      }
+      if(statusData.at_home){
+        lPill.className='status-pill loc-home';
+        document.getElementById('locationPillText').textContent='\u5728\u5bb6';
+      } else {
+        lPill.className='status-pill loc-away';
+        document.getElementById('locationPillText').textContent='\u5916\u51fa';
+      }
+    }catch(e){
+      // fallback: use toggle state
+      const cPill=document.getElementById('chargingPill');
+      const lPill=document.getElementById('locationPill');
+      if(chargingOn){
+        cPill.className='status-pill charging-on';
+        document.getElementById('chargingPillText').textContent='\u5145\u7535\u4e2d';
+      } else {
+        cPill.className='status-pill charging-off';
+        document.getElementById('chargingPillText').textContent='\u672a\u5145\u7535';
+      }
+      if(locationOn){
+        lPill.className='status-pill loc-home';
+        document.getElementById('locationPillText').textContent='\u5728\u5bb6';
+      } else {
+        lPill.className='status-pill loc-away';
+        document.getElementById('locationPillText').textContent='\u5916\u51fa';
+      }
+    }
 
     // Load data tab content if visible
     if(currentPage===2){loadHeatmap();loadWeekly();}
@@ -1052,12 +1225,48 @@ async function loadHeatmap(){
 // ============ Sessions ============
 async function loadSessions(){
   try{
-    const res=await fetch(API+'/api/screentime/sessions');
+    // Fetch sessions and hourly data in parallel
+    const [res, hourlyRes]=await Promise.all([
+      fetch(API+'/api/screentime/sessions'),
+      fetch(API+'/api/screentime/hourly')
+    ]);
     const data=await res.json();
+
+    // Render hourly timeline chart
+    try{
+      const hourlyData=await hourlyRes.json();
+      const hours=hourlyData.hours;
+      const maxMins=Math.max(...Object.values(hours).map(h=>(h.total_seconds||0)/60),1);
+      let chartHtml='';
+      for(let h=0;h<24;h++){
+        const info=hours[h]||{total_seconds:0,apps:{}};
+        const totalMins=(info.total_seconds||0)/60;
+        const barH=Math.max(0,totalMins/maxMins*90);
+        let segsHtml='';
+        if(info.apps && typeof info.apps==='object'){
+          const appEntries=Object.entries(info.apps).sort((a,b)=>b[1]-a[1]);
+          const totalSec=info.total_seconds||1;
+          appEntries.forEach(([app,secs])=>{
+            const segH=Math.max(1,(secs/totalSec)*barH);
+            const c=appColor(app);
+            segsHtml+=`<div class="hourly-seg" style="height:${segH}px;background:${c}" title="${app}: ${Math.round(secs/60)}min"></div>`;
+          });
+        } else {
+          if(barH>0) segsHtml=`<div class="hourly-seg" style="height:${barH}px;background:var(--primary-light)"></div>`;
+        }
+        const showLabel=(h%3===0);
+        chartHtml+=`<div class="hourly-col">
+          <div class="hourly-bar" style="height:${barH}px">${segsHtml}</div>
+          <div class="hourly-label">${showLabel?h:''}</div>
+        </div>`;
+      }
+      document.getElementById('hourlyChart').innerHTML=chartHtml;
+    }catch(e){}
+
     document.getElementById('sessionList').innerHTML=data.sessions.map((s,i)=>{
       const endStr=s.end?s.end.split(' ').pop():'\u8fdb\u884c\u4e2d';
       const startStr=s.start.split(' ').pop();
-      const dc=dotColor(i);
+      const dc=appColor(s.app);
       const endVal=s.end||'';
       const startVal=s.start||'';
       return `<div class="session-item" onclick="toggleSessionEdit(this)" data-sid="${s.id}">
@@ -1118,14 +1327,14 @@ async function saveSession(el){
     showToast('(>_<) \u5df2\u4fdd\u5b58\u4fee\u6539\uff5e');
     refreshAll();
   }catch(e){
-    showToast('\u4fdd\u5b58\u5931\u8d25...');
+    showToast('(>_<) \u4fdd\u5b58\u5931\u8d25...');
   }
 }
 
 async function deleteSession(id){
   if(!confirm('\u786e\u5b9a\u8981\u5220\u9664\u8fd9\u4e2a\u4f1a\u8bdd\u5417\uff1f')) return;
   await fetch(API+'/api/screentime/session/'+id,{method:'DELETE'});
-  showToast('(-.-)~ \u5df2\u5220\u9664\uff5e');
+  showToast('(-_-)zzz \u5df2\u5220\u9664\uff5e');
   refreshAll();
 }
 
@@ -1136,11 +1345,11 @@ async function toggleApp(app, action){
     if(action==='start'){
       showToast('(*^-^*) \u5df2\u5f00\u542f\u8bb0\u5f55\uff5e');
     } else {
-      showToast('(-.-)zzz \u5df2\u5173\u95ed\uff5e');
+      showToast('(-_-)zzz \u5df2\u5173\u95ed\uff5e');
     }
     setTimeout(()=>refreshAll(), 500);
   }catch(e){
-    showToast('\u64cd\u4f5c\u5931\u8d25...');
+    showToast('(>_<) \u64cd\u4f5c\u5931\u8d25...');
   }
 }
 
@@ -1186,8 +1395,63 @@ function doRefresh(){
 async function resetAll(){
   if(!confirm('\u786e\u5b9a\u8981\u91cd\u7f6e\u6240\u6709\u6570\u636e\u5417\uff1f')) return;
   await fetch(API+'/api/screentime/reset_all');
-  showToast('(o_o) \u5df2\u91cd\u7f6e\uff5e');
+  showToast('(*^_^*) \u5df2\u91cd\u7f6e\uff5e');
   refreshAll();
+}
+
+// ============ History Panels ============
+async function toggleHistory(type){
+  const wrapId = type==='charging' ? 'chargingWrap' : 'locationWrap';
+  const panelId = type==='charging' ? 'chargingHistory' : 'locationHistory';
+  const wrap = document.getElementById(wrapId);
+  if(wrap.classList.contains('expanded')){
+    wrap.classList.remove('expanded');
+    return;
+  }
+  wrap.classList.add('expanded');
+  await loadHistory(type);
+}
+
+async function loadHistory(type){
+  const panelId = type==='charging' ? 'chargingHistory' : 'locationHistory';
+  const endpoint = type==='charging' ? '/api/event/charging_history' : '/api/event/location_history';
+  const panel = document.getElementById(panelId);
+  panel.innerHTML='<div class="history-empty">loading...</div>';
+  try{
+    const res=await fetch(API+endpoint);
+    const data=await res.json();
+    const events=data.events||[];
+    if(events.length===0){
+      panel.innerHTML='<div class="history-empty">(*^_^*) no history yet</div>';
+      return;
+    }
+    const typeLabels = type==='charging'
+      ? {charging_start:'\u5f00\u59cb\u5145\u7535',charging_stop:'\u505c\u6b62\u5145\u7535'}
+      : {arrived_home:'\u5230\u5bb6',left_home:'\u51fa\u95e8'};
+    panel.innerHTML=events.map(ev=>{
+      const label=typeLabels[ev.type]||ev.type;
+      const ts=ev.timestamp||ev.ts||'';
+      return `<div class="history-event">
+        <div class="history-event-info">
+          <span class="history-event-type">${label}</span>
+          <span class="history-event-time">${ts}</span>
+        </div>
+        <button class="history-del-btn" onclick="event.stopPropagation();deleteEvent(${ev.id},'${type}')">&#x5220;&#x9664;</button>
+      </div>`;
+    }).join('');
+  }catch(e){
+    panel.innerHTML='<div class="history-empty">(>_<) failed to load</div>';
+  }
+}
+
+async function deleteEvent(id, type){
+  try{
+    await fetch(API+'/api/event/delete/'+id,{method:'DELETE'});
+    showToast('(*^-^*) \u5df2\u5220\u9664\uff5e');
+    await loadHistory(type);
+  }catch(e){
+    showToast('(>_<) \u5220\u9664\u5931\u8d25...');
+  }
 }
 
 // ============ Init ============
