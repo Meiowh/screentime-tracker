@@ -407,6 +407,37 @@ def get_latest_event_by_type(event_type: str):
         return dict(row) if row else None
 
 
+def get_latest_events_by_types(types: list[str]) -> dict:
+    """Return the most recent event for each type in one query. Returns {type: row_dict}."""
+    with get_cursor() as cur:
+        cur.execute(
+            """SELECT DISTINCT ON (type) * FROM events
+             WHERE type = ANY(%s)
+             ORDER BY type, ts DESC""",
+            (types,),
+        )
+        return {row["type"]: dict(row) for row in cur.fetchall()}
+
+
+def get_month_day_totals(year: int, month: int, tz_name: str) -> list[dict]:
+    """Get per-day total seconds for a month using SQL aggregation."""
+    with get_cursor() as cur:
+        cur.execute(
+            """SELECT
+                 EXTRACT(DAY FROM start_ts AT TIME ZONE %s)::int AS day,
+                 COALESCE(SUM(duration_seconds), 0)::int AS total_seconds,
+                 COUNT(*) AS session_count
+               FROM sessions
+               WHERE start_ts AT TIME ZONE %s >= make_date(%s, %s, 1)::date
+                 AND start_ts AT TIME ZONE %s < (make_date(%s, %s, 1)::date + interval '1 month')
+                 AND duration_seconds IS NOT NULL
+               GROUP BY 1
+               ORDER BY 1""",
+            (tz_name, tz_name, year, month, tz_name, year, month),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
 def delete_event(event_id: int):
     """Delete an event by id."""
     with get_cursor() as cur:

@@ -632,33 +632,29 @@ def get_location_history() -> dict:
 
 
 def get_current_status() -> dict:
-    """Current charging and location state based on the latest event of each type."""
-    last_charging = db.get_latest_event_by_type("charging_start")
-    last_uncharging = db.get_latest_event_by_type("charging_stop")
-
-    # Determine charging: whichever event is more recent wins
-    if last_charging and last_uncharging:
-        charging = last_charging["ts"] > last_uncharging["ts"]
-    elif last_charging:
+    """Current charging and location state — single DB query."""
+    latest = db.get_latest_events_by_types([
+        "charging_start", "charging_stop", "arrived_home", "left_home"
+    ])
+    lc = latest.get("charging_start")
+    lu = latest.get("charging_stop")
+    if lc and lu:
+        charging = lc["ts"] > lu["ts"]
+    elif lc:
         charging = True
     else:
         charging = False
 
-    last_arrived = db.get_latest_event_by_type("arrived_home")
-    last_left = db.get_latest_event_by_type("left_home")
-
-    # Determine at_home: whichever event is more recent wins
-    if last_arrived and last_left:
-        at_home = last_arrived["ts"] > last_left["ts"]
-    elif last_arrived:
+    la = latest.get("arrived_home")
+    ll = latest.get("left_home")
+    if la and ll:
+        at_home = la["ts"] > ll["ts"]
+    elif la:
         at_home = True
     else:
         at_home = False
 
-    return {
-        "charging": charging,
-        "at_home": at_home,
-    }
+    return {"charging": charging, "at_home": at_home}
 
 
 # ---------------------------------------------------------------------------
@@ -803,26 +799,20 @@ def get_day_summary(date_str: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_month_overview(year: int, month: int) -> dict:
-    """Per-day totals for a given month."""
-    sessions = db.get_sessions_for_month(year, month, _tz_name())
+    """Per-day totals for a given month — uses SQL aggregation for speed."""
     num_days = calendar.monthrange(year, month)[1]
-
     days: dict[str, dict] = {}
     for d in range(1, num_days + 1):
         days[str(d)] = {"total_seconds": 0, "has_data": False}
 
-    for s in sessions:
-        local_start = _to_local(s["start_ts"])
-        day_key = str(local_start.day)
-        dur = _session_duration_seconds(s)
-        days[day_key]["total_seconds"] += dur
-        days[day_key]["has_data"] = True
+    rows = db.get_month_day_totals(year, month, _tz_name())
+    for r in rows:
+        day_key = str(r["day"])
+        if day_key in days:
+            days[day_key]["total_seconds"] = r["total_seconds"]
+            days[day_key]["has_data"] = r["total_seconds"] > 0
 
-    return {
-        "year": year,
-        "month": month,
-        "days": days,
-    }
+    return {"year": year, "month": month, "days": days}
 
 
 # ---------------------------------------------------------------------------
