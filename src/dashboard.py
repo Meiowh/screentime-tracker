@@ -812,6 +812,20 @@ body{
   font-weight:500;
 }
 
+/* Collapsible section headers */
+.section-header{
+  cursor:pointer;
+  padding:14px 16px;
+  font-weight:600;
+  font-size:0.9em;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  transition:opacity 0.2s;
+}
+.section-header:hover{opacity:0.7}
+
 /* ============ Bottom Nav ============ */
 .bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
@@ -1111,55 +1125,71 @@ body{
       <button class="setting-btn danger-btn" onclick="resetAll()">&#x91cd;&#x7f6e;&#x6240;&#x6709;</button>
 
       <div class="tz-section">
-        <div class="tz-title">&#x65f6;&#x533a;&#x8bbe;&#x7f6e;</div>
-        <div class="tz-current" id="tzCurrent">&#x5f53;&#x524d;&#x65f6;&#x533a;&#xff1a;loading...</div>
-        <div class="tz-row">
-          <label>UTC &#x504f;&#x79fb;</label>
-          <input type="number" class="tz-input" id="tzOffsetInput" min="-12" max="14" step="0.5" value="-4">
+        <div class="section-header" onclick="toggleSection('tz-content')">
+          <span id="tz-content-arrow">&#x25b8;</span> &#x65f6;&#x533a;&#x8bbe;&#x7f6e;
         </div>
-        <button class="tz-save-btn" onclick="saveTimezone()">&#x4fdd;&#x5b58;</button>
+        <div id="tz-content" style="display:none">
+          <div class="tz-current" id="tzCurrent">&#x5f53;&#x524d;&#x65f6;&#x533a;&#xff1a;loading...</div>
+          <div class="tz-row">
+            <label>UTC &#x504f;&#x79fb;</label>
+            <input type="number" class="tz-input" id="tzOffsetInput" min="-12" max="14" step="0.5" value="-4">
+          </div>
+          <button class="tz-save-btn" onclick="saveTimezone()">&#x4fdd;&#x5b58;</button>
+        </div>
       </div>
 
       <div class="app-color-section">
-        <div class="app-color-title">&#x5e94;&#x7528;&#x989c;&#x8272;</div>
-        <div class="app-color-list" id="appColorList"></div>
+        <div class="section-header" onclick="toggleSection('appcolor-content')">
+          <span id="appcolor-content-arrow">&#x25b8;</span> &#x5e94;&#x7528;&#x989c;&#x8272;
+        </div>
+        <div id="appcolor-content" style="display:none">
+          <div class="app-color-list" id="appColorList"></div>
+        </div>
       </div>
 
       <div class="watermark-section">
-        <div class="watermark-title">&#x80cc;&#x666f;&#x989c;&#x8272;</div>
-        <div class="watermark-row">
-          <label>&#x8d77;&#x59cb;</label>
-          <input type="color" id="bgColor1" value="#d4e8f5" onchange="onBgChange()">
+        <div class="section-header" onclick="toggleSection('bgcolor-content')">
+          <span id="bgcolor-content-arrow">&#x25b8;</span> &#x80cc;&#x666f;&#x989c;&#x8272;
         </div>
-        <div class="watermark-row">
-          <label>&#x4e2d;&#x95f4;</label>
-          <input type="color" id="bgColor2" value="#b8d8ee" onchange="onBgChange()">
-        </div>
-        <div class="watermark-row">
-          <label>&#x7ec8;&#x70b9;</label>
-          <input type="color" id="bgColor3" value="#a8d0e0" onchange="onBgChange()">
+        <div id="bgcolor-content" style="display:none">
+          <div class="watermark-row">
+            <label>&#x8d77;&#x59cb;</label>
+            <input type="color" id="bgColor1" value="#d4e8f5" onchange="onBgChange()">
+          </div>
+          <div class="watermark-row">
+            <label>&#x4e2d;&#x95f4;</label>
+            <input type="color" id="bgColor2" value="#b8d8ee" onchange="onBgChange()">
+          </div>
+          <div class="watermark-row">
+            <label>&#x7ec8;&#x70b9;</label>
+            <input type="color" id="bgColor3" value="#a8d0e0" onchange="onBgChange()">
+          </div>
         </div>
       </div>
       <div class="watermark-section">
-        <div class="watermark-title">&#x6c34;&#x5370;&#x8bbe;&#x7f6e;</div>
-        <div class="watermark-row">
-          <label>&#x989c;&#x8272;</label>
-          <input type="color" id="wmColor" value="#3a5068" onchange="onWatermarkChange()">
+        <div class="section-header" onclick="toggleSection('wm-content')">
+          <span id="wm-content-arrow">&#x25b8;</span> &#x6c34;&#x5370;&#x8bbe;&#x7f6e;
         </div>
-        <div class="watermark-row">
-          <label>&#x900f;&#x660e;&#x5ea6;</label>
-          <input type="range" id="wmOpacity" min="0" max="100" value="100" oninput="onWatermarkChange();document.getElementById('wmOpacityVal').textContent=this.value+'%'">
-          <span class="wm-val" id="wmOpacityVal">100%</span>
-        </div>
-        <div class="watermark-row">
-          <label>&#x5927;&#x5c0f;</label>
-          <input type="range" id="wmSize" min="50" max="200" value="100" oninput="onWatermarkChange();document.getElementById('wmSizeVal').textContent=this.value+'%'">
-          <span class="wm-val" id="wmSizeVal">100%</span>
-        </div>
-        <div class="watermark-row" style="flex-direction:column;align-items:stretch;gap:6px">
-          <label>&#x5185;&#x5bb9;</label>
-          <input type="text" id="wmContent" style="width:100%;padding:8px 12px;border-radius:12px;border:1px solid var(--card-border);background:rgba(255,255,255,0.6);color:var(--text);font-size:0.85em;font-family:'Zen Maru Gothic',sans-serif" placeholder="(>_<), (*^-^*), (=^-^=), ..." oninput="onWatermarkChange()">
-          <span style="font-size:0.72em;color:var(--text-dim)">&#x7528;&#x82f1;&#x6587;&#x9017;&#x53f7;&#x5206;&#x9694;&#xff0c;&#x7559;&#x7a7a;&#x7528;&#x9ed8;&#x8ba4;</span>
+        <div id="wm-content" style="display:none">
+          <div class="watermark-row">
+            <label>&#x989c;&#x8272;</label>
+            <input type="color" id="wmColor" value="#3a5068" onchange="onWatermarkChange()">
+          </div>
+          <div class="watermark-row">
+            <label>&#x900f;&#x660e;&#x5ea6;</label>
+            <input type="range" id="wmOpacity" min="0" max="100" value="100" oninput="onWatermarkChange();document.getElementById('wmOpacityVal').textContent=this.value+'%'">
+            <span class="wm-val" id="wmOpacityVal">100%</span>
+          </div>
+          <div class="watermark-row">
+            <label>&#x5927;&#x5c0f;</label>
+            <input type="range" id="wmSize" min="50" max="200" value="100" oninput="onWatermarkChange();document.getElementById('wmSizeVal').textContent=this.value+'%'">
+            <span class="wm-val" id="wmSizeVal">100%</span>
+          </div>
+          <div class="watermark-row" style="flex-direction:column;align-items:stretch;gap:6px">
+            <label>&#x5185;&#x5bb9;</label>
+            <input type="text" id="wmContent" style="width:100%;padding:8px 12px;border-radius:12px;border:1px solid var(--card-border);background:rgba(255,255,255,0.6);color:var(--text);font-size:0.85em;font-family:'Zen Maru Gothic',sans-serif" placeholder="(>_<), (*^-^*), (=^-^=), ..." oninput="onWatermarkChange()">
+            <span style="font-size:0.72em;color:var(--text-dim)">&#x7528;&#x82f1;&#x6587;&#x9017;&#x53f7;&#x5206;&#x9694;&#xff0c;&#x7559;&#x7a7a;&#x7528;&#x9ed8;&#x8ba4;</span>
+          </div>
         </div>
       </div>
 
@@ -1194,6 +1224,18 @@ body{
 </nav>
 
 <script>
+function toggleSection(id){
+  const el=document.getElementById(id);
+  const arrow=document.getElementById(id+'-arrow');
+  if(el.style.display==='none'){
+    el.style.display='block';
+    if(arrow) arrow.textContent='\u25be';
+  }else{
+    el.style.display='none';
+    if(arrow) arrow.textContent='\u25b8';
+  }
+}
+
 const API = window.location.origin;
 
 const DOT_COLORS = ['#7ec8e3','#a8e6cf','#ffc0cb','#ffe4a0','#8ee4af','#b8e4f0','#ffd6e0','#c8e6ff'];
