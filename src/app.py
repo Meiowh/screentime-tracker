@@ -189,6 +189,8 @@ async def set_timezone(request: Request) -> JSONResponse:
                 set_setting('timezone_name', offset_to_tz[offset])
                 updated["timezone_name"] = offset_to_tz[offset]
 
+        from src.config import invalidate_tz_cache
+        invalidate_tz_cache()
         return JSONResponse({"status": "updated", **updated})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -210,6 +212,8 @@ async def event(request: Request) -> JSONResponse:
     result = models.handle_event(event_type)
 
     if tz_auto_updated:
+        from src.config import invalidate_tz_cache
+        invalidate_tz_cache()
         result["timezone_auto_updated"] = tz_auto_updated
 
     return JSONResponse(result)

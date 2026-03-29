@@ -17,23 +17,45 @@ AUTO_CLOSE_HOURS: int = 24
 SLEEP_INFER_HOURS: int = 2  # charging + night + no activity for 2h = probably sleeping
 
 
-def get_current_timezone() -> ZoneInfo:
-    """Get current timezone from database settings. Falls back to America/New_York."""
+import time as _time
+
+# In-memory timezone cache (avoids DB query on every API call)
+_tz_cache = {"name": None, "offset": None, "expires": 0}
+_TZ_CACHE_TTL = 60  # refresh from DB every 60 seconds
+
+
+def _refresh_tz_cache():
+    now = _time.time()
+    if _tz_cache["expires"] > now:
+        return
     from src.db import get_setting
     try:
-        tz_name = get_setting('timezone_name', 'America/New_York')
-        return ZoneInfo(tz_name)
+        _tz_cache["name"] = get_setting('timezone_name', 'America/New_York')
+        _tz_cache["offset"] = int(get_setting('timezone_offset', '-4'))
+    except Exception:
+        _tz_cache["name"] = 'America/New_York'
+        _tz_cache["offset"] = -4
+    _tz_cache["expires"] = now + _TZ_CACHE_TTL
+
+
+def invalidate_tz_cache():
+    """Call after timezone is updated to force refresh."""
+    _tz_cache["expires"] = 0
+
+
+def get_current_timezone() -> ZoneInfo:
+    """Get current timezone from cache/database. Falls back to America/New_York."""
+    _refresh_tz_cache()
+    try:
+        return ZoneInfo(_tz_cache["name"] or 'America/New_York')
     except Exception:
         return ZoneInfo('America/New_York')
 
 
 def get_timezone_offset() -> int:
     """Get current UTC offset in hours."""
-    from src.db import get_setting
-    try:
-        return int(get_setting('timezone_offset', '-4'))
-    except Exception:
-        return -4
+    _refresh_tz_cache()
+    return _tz_cache["offset"] if _tz_cache["offset"] is not None else -4
 
 
 def get_timezone_label() -> str:
