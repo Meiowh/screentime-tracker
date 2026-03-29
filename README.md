@@ -169,7 +169,7 @@ The toggle endpoint automatically detects whether to open or close based on the 
 
 ---
 
-## 中文使用教程
+## 使用教程
 
 ### iPhone 快捷指令配置教程
 
@@ -177,13 +177,11 @@ The toggle endpoint automatically detects whether to open or close based on the 
 
 每个你想追踪的 App 需要配一个自动化：
 
-1. 打开"快捷指令" App → 自动化 → **+** 新自动化
-2. 选择触发条件："App" → 选择一个 App（比如小红书）→ 勾选"已打开"和"已关闭"
-3. 添加操作："获取URL的内容"
-4. URL 填写：`https://你的服务器地址/api/screentime/toggle/小红书`
-5. 方法：GET
-6. 关闭"运行前询问"（设为立即运行）
-7. 保存
+1. 打开"快捷指令" App → 自动化 → 右上角**+** 新自动化
+2. 选择触发条件："App" → 选择一个 App（比如小红书）→ 勾选"已打开"和"已关闭" → 勾选"立即运行"（关闭运行时通知）
+3. 点击右上角"下一步" → 创建新快捷指令
+4. 搜索操作"URL" → 选择"获取URL内容"
+5. URL 填写：`https://你的服务器地址/api/screentime/toggle/小红书` → 右上角"保存"
 
 重复以上步骤给每个想追踪的 App。
 
@@ -195,15 +193,13 @@ The toggle endpoint automatically detects whether to open or close based on the 
 
 1. 新自动化 → 触发条件："充电器" → "已连接"
 2. 添加操作1："日期" → "当前日期"
-3. 添加操作2："格式化日期" → 日期格式选"自定义" → 输入 `yyyy-MM-dd'T'HH:mm:ssZZZZZ`
+3. 添加操作2："类型：日期" → 日期格式选"ISO 8601"(示例：`yyyy-MM-dd'T'HH:mm:ssZZZZZ`)
 4. 添加操作3："获取URL的内容"
 5. URL：`https://你的服务器地址/api/event/charging_start?t=`（在最后拖入上一步的"已格式化的日期"变量）
-6. 方法：GET
-7. 关闭"运行前询问"
 
 **停止充电的自动化：**
 
-同上，但触发条件改为"已断开"，URL 改成 `/api/event/charging_stop?t=` + 时间变量
+同上，但触发条件改为"断开连接"，URL 改成 `/api/event/charging_stop
 
 > **为什么要带 `?t=` 参数？** 这个参数包含了你手机当前的时区信息。服务器会从中提取 UTC 偏移量，旅行时自动更新时区设置，不需要手动改。
 
