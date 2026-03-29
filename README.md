@@ -39,7 +39,7 @@ Three-layer architecture: **iPhone Shortcuts** send toggle signals to a **hosted
 |                  |       daily_report, weekly_trend, ...               |
 +------------------+                                               +------------------+
                                                                    |                  |
-+------------------+       GET /dashboard                         |  Web Dashboard   |
++------------------+       GET /panel                             |  Web Dashboard   |
 |                  | ------------------------------------------->  |  Auto-refresh    |
 |  Browser         |                                               |  Dark theme      |
 |                  | <-------------------------------------------  |  Live timer      |
@@ -70,7 +70,7 @@ cp .env.example .env
 python main.py
 ```
 
-The server starts on port 8080 by default. Visit `http://localhost:8080/dashboard` for the web UI.
+The server starts on port 8080 by default. Visit `http://localhost:8080/panel` for the web UI.
 
 ## Environment Variables
 
@@ -96,7 +96,7 @@ The server starts on port 8080 by default. Visit `http://localhost:8080/dashboar
 | `DELETE` | `/api/screentime/session/{session_id}` | Delete a session |
 | `GET` | `/api/screentime/reset/{app_name}` | Force close an app |
 | `GET` | `/api/screentime/reset_all` | Force close all apps |
-| `GET` | `/dashboard` | Web dashboard |
+| `GET` | `/panel` | Web dashboard |
 | `GET` | `/health` | Health check |
 
 ## MCP Tools
@@ -166,6 +166,102 @@ Create an automation in Apple Shortcuts for each app:
 4. **Method**: GET
 
 The toggle endpoint automatically detects whether to open or close based on the current session state.
+
+---
+
+## 中文使用教程
+
+### iPhone 快捷指令配置教程
+
+#### 基础配置（App 追踪）
+
+每个你想追踪的 App 需要配一个自动化：
+
+1. 打开"快捷指令" App → 自动化 → **+** 新自动化
+2. 选择触发条件："App" → 选择一个 App（比如小红书）→ 勾选"已打开"和"已关闭"
+3. 添加操作："获取URL的内容"
+4. URL 填写：`https://你的服务器地址/api/screentime/toggle/小红书`
+5. 方法：GET
+6. 关闭"运行前询问"（设为立即运行）
+7. 保存
+
+重复以上步骤给每个想追踪的 App。
+
+> **提示**：App 名称可以用中文也可以用英文，比如 `小红书`、`Twitter`、`微信` 都可以。名称会直接显示在 Dashboard 上。
+
+#### 充电追踪（带自动时区检测）
+
+**开始充电的自动化：**
+
+1. 新自动化 → 触发条件："充电器" → "已连接"
+2. 添加操作1："日期" → "当前日期"
+3. 添加操作2："格式化日期" → 日期格式选"自定义" → 输入 `yyyy-MM-dd'T'HH:mm:ssZZZZZ`
+4. 添加操作3："获取URL的内容"
+5. URL：`https://你的服务器地址/api/event/charging_start?t=`（在最后拖入上一步的"已格式化的日期"变量）
+6. 方法：GET
+7. 关闭"运行前询问"
+
+**停止充电的自动化：**
+
+同上，但触发条件改为"已断开"，URL 改成 `/api/event/charging_stop?t=` + 时间变量
+
+> **为什么要带 `?t=` 参数？** 这个参数包含了你手机当前的时区信息。服务器会从中提取 UTC 偏移量，旅行时自动更新时区设置，不需要手动改。
+
+#### 位置追踪
+
+1. **离开家**：新自动化 → "离开" → 选你家位置 → 获取URL `https://你的服务器地址/api/event/left_home`
+2. **回到家**：新自动化 → "到达" → 选你家位置 → 获取URL `https://你的服务器地址/api/event/arrived_home`
+
+---
+
+### Dashboard 使用说明
+
+- 访问地址：`https://你的服务器地址/panel`
+- 5个页面：**主页** / **应用排行** / **数据分析** / **今日会话** / **设置**
+- 左右滑动切换页面，底部图标也可以点击切换
+- 设置页可以自定义：时区、应用颜色、背景颜色、水印样式
+
+---
+
+### 时区配置
+
+- 默认东部时间（UTC-4）
+- 旅行时自动检测：充电自动化带 `?t=` 参数会自动更新时区
+- 手动设置：Dashboard 设置页 → 时区设置 → 输入 UTC 偏移
+
+#### 常见时区对照
+
+| 时区 | UTC 偏移 | 城市 |
+|------|---------|------|
+| 北京时间 | +8 | 北京、上海、台北 |
+| 东部时间（夏令时）| -4 | 纽约、俄亥俄 |
+| 东部时间（冬令时）| -5 | 纽约、俄亥俄 |
+| 中部时间（夏令时）| -5 | 芝加哥 |
+| 太平洋时间（夏令时）| -7 | 洛杉矶、旧金山 |
+
+---
+
+### 睡眠检测说明
+
+系统每小时自动检查一次，根据以下规则判断你是否在睡觉：
+
+- **充电中 + 凌晨 + 2小时没用手机** → 自动关闭 app，Bot 通知
+- **充电中 + 白天 + 3小时没操作** → 午睡检测
+- **没充电 + 白天 + 4小时没操作** → 自动关闭
+- **短时间无操作** → 发提醒但不关闭
+
+---
+
+### 一键部署教程（Railway）
+
+1. Fork 这个仓库到你的 GitHub
+2. 登录 [railway.app](https://railway.app)
+3. 新建项目 → GitHub Repo → 选择你 fork 的仓库
+4. 添加 PostgreSQL 数据库
+5. 等待自动部署完成
+6. 打开你的 Railway 域名 + `/panel` 查看 Dashboard
+
+---
 
 ## License
 
