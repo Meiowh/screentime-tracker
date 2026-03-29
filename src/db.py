@@ -64,6 +64,17 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_sessions_app_start ON sessions(app, start_ts);
 CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_ts);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO settings (key, value) VALUES ('timezone_offset', '-4')
+ON CONFLICT (key) DO NOTHING;
+INSERT INTO settings (key, value) VALUES ('timezone_name', 'America/New_York')
+ON CONFLICT (key) DO NOTHING;
 """
 
 
@@ -402,3 +413,28 @@ def delete_event(event_id: int):
         cur.execute("DELETE FROM events WHERE id = %s RETURNING id", (event_id,))
         row = cur.fetchone()
         return dict(row) if row else None
+
+
+# ---------------------------------------------------------------------------
+# Settings helpers
+# ---------------------------------------------------------------------------
+
+def get_setting(key: str, default: str = '') -> str:
+    """Get a setting value by key."""
+    with get_cursor() as cur:
+        cur.execute("SELECT value FROM settings WHERE key = %s", (key,))
+        row = cur.fetchone()
+        return row["value"] if row else default
+
+
+def set_setting(key: str, value: str):
+    """Set a setting value (upsert)."""
+    with get_cursor() as cur:
+        cur.execute(
+            """INSERT INTO settings (key, value, updated_at)
+               VALUES (%s, %s, NOW())
+               ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+            RETURNING key, value""",
+            (key, value),
+        )
+        return dict(cur.fetchone())

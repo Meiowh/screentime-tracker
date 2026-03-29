@@ -765,6 +765,47 @@ body{
   color:var(--text-dim);font-size:0.9em;
 }
 
+/* Timezone settings */
+.tz-section{
+  margin-bottom:16px;
+  background:var(--card-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--card-border);
+  border-radius:20px;
+  box-shadow:var(--card-shadow);
+  padding:16px 20px;
+}
+.tz-title{
+  font-size:0.92em;font-weight:700;color:var(--text);
+  margin-bottom:12px;text-align:center;
+}
+.tz-current{
+  text-align:center;font-size:0.85em;color:var(--text-dim);
+  margin-bottom:12px;font-weight:500;
+}
+.tz-row{
+  display:flex;align-items:center;justify-content:center;
+  gap:10px;margin-bottom:10px;
+}
+.tz-row label{font-size:0.85em;font-weight:500;color:var(--text)}
+.tz-input{
+  width:80px;padding:8px 10px;border-radius:12px;
+  border:1px solid var(--card-border);
+  background:rgba(255,255,255,0.6);color:var(--text);
+  font-size:0.88em;font-family:'Zen Maru Gothic',sans-serif;
+  text-align:center;
+}
+.tz-input:focus{outline:none;border-color:var(--primary)}
+.tz-save-btn{
+  display:block;width:100%;padding:10px;margin-top:10px;
+  background:var(--gradient);color:#fff;
+  border:none;border-radius:16px;
+  font-size:0.88em;font-weight:600;cursor:pointer;
+  font-family:'Zen Maru Gothic',sans-serif;
+  transition:all 0.3s ease;
+}
+.tz-save-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(126,200,227,0.3)}
+
 .settings-footer{
   text-align:center;color:var(--text-dim);
   font-size:0.75em;margin-top:32px;padding-bottom:20px;
@@ -1068,6 +1109,16 @@ body{
 
       <button class="setting-btn" onclick="doRefresh()">&#x5237;&#x65b0;&#x6570;&#x636e;</button>
       <button class="setting-btn danger-btn" onclick="resetAll()">&#x91cd;&#x7f6e;&#x6240;&#x6709;</button>
+
+      <div class="tz-section">
+        <div class="tz-title">&#x65f6;&#x533a;&#x8bbe;&#x7f6e;</div>
+        <div class="tz-current" id="tzCurrent">&#x5f53;&#x524d;&#x65f6;&#x533a;&#xff1a;loading...</div>
+        <div class="tz-row">
+          <label>UTC &#x504f;&#x79fb;</label>
+          <input type="number" class="tz-input" id="tzOffsetInput" min="-12" max="14" step="0.5" value="-4">
+        </div>
+        <button class="tz-save-btn" onclick="saveTimezone()">&#x4fdd;&#x5b58;</button>
+      </div>
 
       <div class="app-color-section">
         <div class="app-color-title">&#x5e94;&#x7528;&#x989c;&#x8272;</div>
@@ -2038,10 +2089,48 @@ function applyWatermarkSettings(){
   if(tEl&&content) tEl.value=content;
 }
 
+// ============ Timezone Settings ============
+async function loadTimezone(){
+  try{
+    const res=await fetch(API+'/api/settings/timezone');
+    const data=await res.json();
+    const el=document.getElementById('tzCurrent');
+    const inp=document.getElementById('tzOffsetInput');
+    if(el) el.textContent='\u5f53\u524d\u65f6\u533a\uff1a'+data.label+' ('+data.timezone_name+')';
+    if(inp) inp.value=data.timezone_offset;
+  }catch(e){}
+}
+
+async function saveTimezone(){
+  const offset=parseFloat(document.getElementById('tzOffsetInput').value);
+  if(isNaN(offset)||offset<-12||offset>14){
+    showToast('(>_<) \u65e0\u6548\u7684UTC\u504f\u79fb\u503c...');
+    return;
+  }
+  try{
+    const res=await fetch(API+'/api/settings/timezone',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({offset:offset})
+    });
+    const data=await res.json();
+    if(data.error){
+      showToast('(>_<) '+data.error);
+    }else{
+      showToast('(*^_^*) \u65f6\u533a\u5df2\u66f4\u65b0\uff5e');
+      loadTimezone();
+      refreshAll();
+    }
+  }catch(e){
+    showToast('(>_<) \u4fdd\u5b58\u5931\u8d25...');
+  }
+}
+
 // ============ Init ============
 applyBgSettings();
 applyWatermarkSettings();
 loadCalendar();
+loadTimezone();
 refreshAll();
 setInterval(refreshAll, 30000);
 </script>

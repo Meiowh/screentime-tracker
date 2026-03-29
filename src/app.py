@@ -1,14 +1,71 @@
 """FastMCP application — HTTP routes and MCP tools."""
 
 import json
+import re
 from starlette.requests import Request
 from starlette.responses import JSONResponse, HTMLResponse
 from mcp.server.fastmcp import FastMCP
 
-from src.config import PORT
+from src.config import PORT, get_current_timezone, get_timezone_offset, get_timezone_label
 from src import models
 from src.dashboard import render_dashboard
 from src.notify import send_telegram_notification
+
+# ---------------------------------------------------------------------------
+# Timezone auto-detection helper
+# ---------------------------------------------------------------------------
+
+def _auto_detect_timezone(t_param: str) -> dict | None:
+    """Parse a ?t= ISO timestamp, extract timezone offset, update if changed.
+    Example: t=2026-03-29T12:28:00-04:00 -> offset = -4
+    Returns dict with old/new offset if changed, else None.
+    """
+    from src.db import get_setting, set_setting
+
+    # Match timezone offset like -04:00, +05:30, +00:00, Z
+    match = re.search(r'([+-])(\d{2}):(\d{2})$', t_param)
+    if not match and t_param.endswith('Z'):
+        new_offset = 0
+    elif match:
+        sign = 1 if match.group(1) == '+' else -1
+        hours = int(match.group(2))
+        minutes = int(match.group(3))
+        new_offset = sign * hours + (sign * minutes / 60 if minutes else 0)
+        # Keep as int if it's a whole number
+        if new_offset == int(new_offset):
+            new_offset = int(new_offset)
+    else:
+        return None
+
+    old_offset_str = get_setting('timezone_offset', '-4')
+    try:
+        old_offset = float(old_offset_str) if '.' in old_offset_str else int(old_offset_str)
+    except ValueError:
+        old_offset = -4
+
+    if new_offset != old_offset:
+        set_setting('timezone_offset', str(new_offset))
+
+        # Try to map offset to a timezone name
+        offset_to_tz = {
+            -12: "Etc/GMT+12", -11: "Pacific/Midway", -10: "Pacific/Honolulu",
+            -9: "America/Anchorage", -8: "America/Los_Angeles", -7: "America/Denver",
+            -6: "America/Chicago", -5: "America/New_York", -4: "America/New_York",
+            -3: "America/Sao_Paulo", 0: "UTC",
+            1: "Europe/London", 2: "Europe/Berlin", 3: "Europe/Moscow",
+            4: "Asia/Dubai", 5: "Asia/Karachi", 6: "Asia/Dhaka",
+            7: "Asia/Bangkok", 8: "Asia/Shanghai", 9: "Asia/Tokyo",
+            10: "Australia/Sydney", 12: "Pacific/Auckland",
+        }
+        int_offset = int(new_offset) if new_offset == int(new_offset) else None
+        if int_offset is not None and int_offset in offset_to_tz:
+            set_setting('timezone_name', offset_to_tz[int_offset])
+
+        print(f"[timezone] Auto-updated from {old_offset} to {new_offset}")
+        return {"old_offset": old_offset, "new_offset": new_offset}
+
+    return None
+
 
 # ---------------------------------------------------------------------------
 # FastMCP instance
@@ -76,12 +133,85 @@ async def delete_event_route(request: Request) -> JSONResponse:
     return JSONResponse({"error": "event not found"}, status_code=404)
 
 
+# --- Timezone settings ---
+
+@mcp.custom_route("/api/settings/timezone", methods=["GET"])
+async def get_timezone(request: Request) -> JSONResponse:
+    """Get current timezone setting."""
+    from src.db import get_setting
+    tz_name = get_setting('timezone_name', 'America/New_York')
+    tz_offset = get_setting('timezone_offset', '-4')
+    return JSONResponse({
+        "timezone_name": tz_name,
+        "timezone_offset": int(tz_offset),
+        "label": get_timezone_label(),
+    })
+
+
+@mcp.custom_route("/api/settings/timezone", methods=["POST"])
+async def set_timezone(request: Request) -> JSONResponse:
+    """Set timezone. Body: {"offset": -7} or {"name": "America/Los_Angeles"} or both."""
+    from src.db import set_setting
+    from zoneinfo import ZoneInfo
+    try:
+        body = await request.json()
+        updated = {}
+
+        if "offset" in body:
+            offset = body["offset"]
+            set_setting('timezone_offset', str(offset))
+            updated["timezone_offset"] = offset
+
+        if "name" in body:
+            tz_name = body["name"]
+            # Validate timezone name
+            try:
+                ZoneInfo(tz_name)
+            except Exception:
+                return JSONResponse({"error": f"Invalid timezone name: {tz_name}"}, status_code=400)
+            set_setting('timezone_name', tz_name)
+            updated["timezone_name"] = tz_name
+
+        # If only offset provided, try to keep name in sync
+        if "offset" in body and "name" not in body:
+            # Map common offsets to timezone names
+            offset_to_tz = {
+                -12: "Etc/GMT+12", -11: "Pacific/Midway", -10: "Pacific/Honolulu",
+                -9: "America/Anchorage", -8: "America/Los_Angeles", -7: "America/Denver",
+                -6: "America/Chicago", -5: "America/New_York", -4: "America/New_York",
+                -3: "America/Sao_Paulo", -2: "Atlantic/South_Georgia", -1: "Atlantic/Azores",
+                0: "UTC", 1: "Europe/London", 2: "Europe/Berlin", 3: "Europe/Moscow",
+                4: "Asia/Dubai", 5: "Asia/Karachi", 6: "Asia/Dhaka",
+                7: "Asia/Bangkok", 8: "Asia/Shanghai", 9: "Asia/Tokyo",
+                10: "Australia/Sydney", 11: "Pacific/Noumea", 12: "Pacific/Auckland",
+            }
+            if offset in offset_to_tz:
+                set_setting('timezone_name', offset_to_tz[offset])
+                updated["timezone_name"] = offset_to_tz[offset]
+
+        return JSONResponse({"status": "updated", **updated})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 # --- Events (charging, location) ---
 
 @mcp.custom_route("/api/event/{event_type}", methods=["GET"])
 async def event(request: Request) -> JSONResponse:
     event_type = request.path_params["event_type"]
+
+    # Auto-detect timezone from ?t= parameter on charging_start
+    tz_auto_updated = None
+    if event_type == "charging_start":
+        t_param = request.query_params.get("t", "")
+        if t_param:
+            tz_auto_updated = _auto_detect_timezone(t_param)
+
     result = models.handle_event(event_type)
+
+    if tz_auto_updated:
+        result["timezone_auto_updated"] = tz_auto_updated
+
     return JSONResponse(result)
 
 
@@ -145,14 +275,14 @@ async def correct_session(request: Request) -> JSONResponse:
         new_start = body.get("start_ts")
         if not new_end and not new_start:
             return JSONResponse({"error": "end_ts or start_ts required"}, status_code=400)
-        from src.db import update_session_end
-        # User inputs are in ET — if no timezone info, assume America/New_York
-        import re
-        has_tz = lambda s: bool(re.search(r'[+-]\d{2}:\d{2}|[+-]\d{4}|Z$|America/', s)) if s else True
+        from src.db import update_session_end, get_setting
+        # User inputs are in local time — if no timezone info, assume current configured timezone
+        has_tz = lambda s: bool(re.search(r'[+-]\d{2}:\d{2}|[+-]\d{4}|Z$|America/|Europe/|Asia/', s)) if s else True
+        current_tz = get_setting('timezone_name', 'America/New_York')
         if new_end and not has_tz(new_end):
-            new_end = new_end + " America/New_York"
+            new_end = new_end + " " + current_tz
         if new_start and not has_tz(new_start):
-            new_start = new_start + " America/New_York"
+            new_start = new_start + " " + current_tz
         result = update_session_end(session_id, new_end or None)
         if result:
             return JSONResponse({"status": "updated", "session": {

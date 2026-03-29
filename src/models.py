@@ -3,12 +3,21 @@
 import calendar
 from datetime import datetime, timedelta
 from src.config import (
-    TIMEZONE, TIMEZONE_LABEL, NIGHT_OWL_START, NIGHT_OWL_END,
+    NIGHT_OWL_START, NIGHT_OWL_END,
     AUTO_CLOSE_HOURS, SLEEP_INFER_HOURS,
+    get_current_timezone, get_timezone_label,
 )
 from src import db
 
-TZ_NAME = str(TIMEZONE)  # "America/New_York"
+
+def _tz():
+    """Get the current dynamic timezone."""
+    return get_current_timezone()
+
+
+def _tz_name():
+    """Get the current dynamic timezone name string for SQL queries."""
+    return str(get_current_timezone())
 
 
 # ---------------------------------------------------------------------------
@@ -16,14 +25,14 @@ TZ_NAME = str(TIMEZONE)  # "America/New_York"
 # ---------------------------------------------------------------------------
 
 def _now():
-    return datetime.now(TIMEZONE)
+    return datetime.now(_tz())
 
 
 def _to_local(dt):
     """Convert an aware datetime to our configured timezone."""
     if dt is None:
         return None
-    return dt.astimezone(TIMEZONE)
+    return dt.astimezone(_tz())
 
 
 def _fmt_duration(seconds: int | float | None) -> str:
@@ -200,7 +209,7 @@ def force_close_all() -> dict:
 def calculate_today_summary() -> dict:
     """Aggregate today's sessions into a summary."""
     now = _now()
-    sessions = db.get_sessions_today(TZ_NAME)
+    sessions = db.get_sessions_today(_tz_name())
 
     apps: dict[str, dict] = {}
     for s in sessions:
@@ -232,7 +241,7 @@ def calculate_today_summary() -> dict:
 
     return {
         "date": now.strftime("%Y-%m-%d"),
-        "timezone": TIMEZONE_LABEL,
+        "timezone": get_timezone_label(),
         "current_time": now.strftime("%H:%M:%S"),
         "total_seconds": total_seconds,
         "total_minutes": round(total_seconds / 60, 1),
@@ -283,7 +292,7 @@ def get_night_owl_info() -> dict:
     current_hour = now.hour
     is_night = NIGHT_OWL_START <= current_hour < NIGHT_OWL_END
 
-    night_sessions = db.get_sessions_in_hour_range(NIGHT_OWL_START, NIGHT_OWL_END, TZ_NAME, days_back=1)
+    night_sessions = db.get_sessions_in_hour_range(NIGHT_OWL_START, NIGHT_OWL_END, _tz_name(), days_back=1)
     night_apps = list(set(s["app"] for s in night_sessions))
 
     active = db.get_active_session()
@@ -306,7 +315,7 @@ def get_all_nighter_info() -> dict:
     now = _now()
 
     # Check for any session that was active at or after 4 AM today
-    sessions = db.get_sessions_today(TZ_NAME)
+    sessions = db.get_sessions_today(_tz_name())
     past_4am = False
     continuous = False
     last_end = None
@@ -346,7 +355,7 @@ def get_all_nighter_info() -> dict:
 def get_weekly_trend() -> dict:
     """7-day usage summary."""
     now = _now()
-    sessions = db.get_weekly_sessions(TZ_NAME)
+    sessions = db.get_weekly_sessions(_tz_name())
     weekday_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
     days = {}
@@ -387,7 +396,7 @@ def get_weekly_trend() -> dict:
 
     return {
         "period": f"{(now - timedelta(days=6)).strftime('%m-%d')} ~ {now.strftime('%m-%d')}",
-        "timezone": TIMEZONE_LABEL,
+        "timezone": get_timezone_label(),
         "days": days,
     }
 
@@ -398,7 +407,7 @@ def get_weekly_trend() -> dict:
 
 def get_hourly_distribution() -> dict:
     """24-hour heatmap data with per-app breakdown."""
-    rows = db.get_hourly_distribution(TZ_NAME, days_back=7)
+    rows = db.get_hourly_distribution(_tz_name(), days_back=7)
     hours = {h: {"session_count": 0, "total_seconds": 0, "total_formatted": "0m", "apps": {}} for h in range(24)}
     for r in rows:
         h = r["hour"]
@@ -407,7 +416,7 @@ def get_hourly_distribution() -> dict:
         hours[h]["total_formatted"] = _fmt_duration(r["total_seconds"])
 
     # Per-app breakdown: iterate sessions, distribute seconds to hours
-    sessions = db.get_sessions_today(TZ_NAME)
+    sessions = db.get_sessions_today(_tz_name())
     now = _now()
     for s in sessions:
         app = s["app"]
@@ -435,7 +444,7 @@ def get_hourly_distribution() -> dict:
 
 def get_longest_session_today() -> dict:
     """Find the longest single session today."""
-    sessions = db.get_sessions_today(TZ_NAME)
+    sessions = db.get_sessions_today(_tz_name())
     if not sessions:
         return {"found": False, "message": "No sessions today."}
 
@@ -458,7 +467,7 @@ def get_longest_session_today() -> dict:
 
 def get_app_usage(app_name: str) -> dict:
     """Usage history for a specific app."""
-    sessions = db.get_sessions_for_app_today(app_name, TZ_NAME)
+    sessions = db.get_sessions_for_app_today(app_name, _tz_name())
     total = sum(_session_duration_seconds(s) for s in sessions)
     return {
         "app": app_name,
@@ -479,7 +488,7 @@ def get_app_usage(app_name: str) -> dict:
 
 def app_open_count(app_name: str) -> dict:
     """How many times an app was opened today."""
-    sessions = db.get_sessions_for_app_today(app_name, TZ_NAME)
+    sessions = db.get_sessions_for_app_today(app_name, _tz_name())
     return {
         "app": app_name,
         "open_count_today": len(sessions),
@@ -707,8 +716,8 @@ def daily_report() -> dict:
 
 def compare_days(date1: str, date2: str) -> dict:
     """Compare screen time between two dates (YYYY-MM-DD)."""
-    s1 = db.get_sessions_for_date(date1, TZ_NAME)
-    s2 = db.get_sessions_for_date(date2, TZ_NAME)
+    s1 = db.get_sessions_for_date(date1, _tz_name())
+    s2 = db.get_sessions_for_date(date2, _tz_name())
 
     def _summarize(sessions):
         total = sum(_session_duration_seconds(s) for s in sessions)
@@ -742,8 +751,8 @@ def compare_days(date1: str, date2: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_day_summary(date_str: str) -> dict:
-    """Detailed summary for a specific date (YYYY-MM-DD) in ET."""
-    sessions = db.get_sessions_for_date(date_str, TZ_NAME)
+    """Detailed summary for a specific date (YYYY-MM-DD) in configured timezone."""
+    sessions = db.get_sessions_for_date(date_str, _tz_name())
     now = _now()
 
     apps: dict[str, int] = {}
@@ -795,7 +804,7 @@ def get_day_summary(date_str: str) -> dict:
 
 def get_month_overview(year: int, month: int) -> dict:
     """Per-day totals for a given month."""
-    sessions = db.get_sessions_for_month(year, month, TZ_NAME)
+    sessions = db.get_sessions_for_month(year, month, _tz_name())
     num_days = calendar.monthrange(year, month)[1]
 
     days: dict[str, dict] = {}
@@ -824,7 +833,7 @@ def hourly_sleep_check() -> dict:
     """Check if the user is likely sleeping or needs a reminder.
     Called by cron job every hour.
 
-    Rules (ET timezone):
+    Rules (local timezone):
     1. Charging + no activity 2h + night(0-8) + active session -> auto close, msg: sleep
     2. Charging + no activity 3h + day(8-24) + active session -> auto close, msg: nap
     3. No charge + no activity 4h + night(0-8) + active session -> auto close, msg: night_warning
@@ -894,8 +903,8 @@ def hourly_sleep_check() -> dict:
 
 
 def get_recent_sessions_list(limit: int = 30) -> dict:
-    """Today's sessions in ET timezone (most recent first)."""
-    sessions = db.get_sessions_today_et(TZ_NAME)
+    """Today's sessions in configured timezone (most recent first)."""
+    sessions = db.get_sessions_today_et(_tz_name())
     # Apply limit after filtering by today
     sessions = sessions[:limit]
     return {

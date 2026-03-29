@@ -133,6 +133,29 @@ docker build -t screentime-tracker .
 docker run -e DATABASE_URL=postgresql://... -p 8080:8080 screentime-tracker
 ```
 
+## Timezone
+
+The tracker supports dynamic timezone configuration so all time-dependent calculations (today filter, night detection, sleep check, hourly distribution, weekly trends) use the correct local time.
+
+**Default**: `America/New_York` (Eastern Time, UTC-4/UTC-5)
+
+### Auto-detection
+
+When the iPhone shortcut sends a charging start event with a `?t=` parameter containing an ISO 8601 timestamp (e.g. `?t=2026-03-29T12:28:00-07:00`), the server automatically extracts the UTC offset and updates the stored timezone if it differs from the current setting. This handles timezone changes when traveling.
+
+### Manual configuration
+
+Open the web dashboard (`/panel`), navigate to the Settings page (last tab), and use the "时区设置" section to set the UTC offset manually. The input accepts values from -12 to +14 (step 0.5 for half-hour timezones like India UTC+5.5).
+
+### API
+
+- `GET /api/settings/timezone` — returns current timezone name, offset, and label
+- `POST /api/settings/timezone` — set timezone via JSON body: `{"offset": -7}` or `{"name": "America/Los_Angeles"}` or both
+
+### How it works
+
+Timezone settings are stored in a `settings` table in PostgreSQL. All time-dependent functions in the application read the timezone dynamically on each call, so changes take effect immediately without restarting the server.
+
 ## iPhone Shortcut Setup
 
 Create an automation in Apple Shortcuts for each app:
