@@ -142,10 +142,18 @@ async def correct_session(request: Request) -> JSONResponse:
     try:
         body = await request.json()
         new_end = body.get("end_ts")
-        if not new_end:
-            return JSONResponse({"error": "end_ts required"}, status_code=400)
+        new_start = body.get("start_ts")
+        if not new_end and not new_start:
+            return JSONResponse({"error": "end_ts or start_ts required"}, status_code=400)
         from src.db import update_session_end
-        result = update_session_end(session_id, new_end)
+        # User inputs are in ET — if no timezone info, assume America/New_York
+        import re
+        has_tz = lambda s: bool(re.search(r'[+-]\d{2}:\d{2}|[+-]\d{4}|Z$|America/', s)) if s else True
+        if new_end and not has_tz(new_end):
+            new_end = new_end + " America/New_York"
+        if new_start and not has_tz(new_start):
+            new_start = new_start + " America/New_York"
+        result = update_session_end(session_id, new_end or None)
         if result:
             return JSONResponse({"status": "updated", "session": {
                 "id": result["id"],
