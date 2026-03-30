@@ -65,6 +65,15 @@ def _session_duration_seconds(session: dict) -> int:
 # Toggle — the critical function
 # ---------------------------------------------------------------------------
 
+# Debug log for toggle events (in-memory, last 200 entries)
+_toggle_log: list[dict] = []
+_TOGGLE_LOG_MAX = 200
+
+
+def get_toggle_log() -> list[dict]:
+    return list(_toggle_log)
+
+
 def handle_toggle(app_name: str) -> dict:
     """Process a toggle signal from the iPhone shortcut.
 
@@ -74,29 +83,51 @@ def handle_toggle(app_name: str) -> dict:
     3. No active session            -> open new
     Always records an app_toggle event.
     """
+    from datetime import timezone as tz
+    now_utc = datetime.now(tz.utc)
+    log_entry = {
+        "time": _now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+        "app": app_name,
+        "active_before": None,
+        "action": None,
+        "fast_guard": False,
+        "guard_ms": None,
+        "last_toggle_ms": None,
+    }
+
+    # Calculate ms since last toggle
+    if _toggle_log:
+        last_log_time = _toggle_log[-1].get("_utc")
+        if last_log_time:
+            log_entry["last_toggle_ms"] = round((now_utc - last_log_time).total_seconds() * 1000)
+    log_entry["_utc"] = now_utc  # internal, stripped before output
+
     # Clean up stale sessions first
     auto_close_stale_sessions()
 
-    # Fast-switch guard: if this app was closed less than 3 seconds ago,
-    # this toggle is a delayed App Close signal arriving after a new app
-    # was already opened. Ignore it to prevent the old app from reopening.
+    # Fast-switch guard
     last_closed = db.get_last_closed_session_for_app(app_name)
     if last_closed and last_closed.get("end_ts"):
-        from datetime import timezone
         closed_at = last_closed["end_ts"]
         if closed_at.tzinfo is None:
-            closed_at = closed_at.replace(tzinfo=timezone.utc)
-        seconds_since_close = (datetime.now(timezone.utc) - closed_at).total_seconds()
+            closed_at = closed_at.replace(tzinfo=tz.utc)
+        seconds_since_close = (now_utc - closed_at).total_seconds()
         if seconds_since_close < 3:
+            log_entry["fast_guard"] = True
+            log_entry["guard_ms"] = round(seconds_since_close * 1000)
+            log_entry["action"] = "ignored"
+            _toggle_log.append(log_entry)
+            if len(_toggle_log) > _TOGGLE_LOG_MAX:
+                _toggle_log.pop(0)
             db.insert_event("app_toggle", value=app_name)
             return {"action": "ignored", "app": app_name, "reason": "fast_switch_guard", "seconds_since_close": round(seconds_since_close, 1)}
 
     active = db.get_active_session()
+    log_entry["active_before"] = active["app"] if active else None
 
     result = {}
 
     if active and active["app"] == app_name:
-        # Same app toggled again -> close
         closed = db.close_session(active["id"], end_reason="manual")
         result = {
             "action": "closed",
@@ -104,8 +135,8 @@ def handle_toggle(app_name: str) -> dict:
             "duration_seconds": closed["duration_seconds"] if closed else 0,
             "duration": _fmt_duration(closed["duration_seconds"] if closed else 0),
         }
+        log_entry["action"] = "closed"
     elif active and active["app"] != app_name:
-        # Different app -> close old, open new
         db.close_session(active["id"], end_reason="new_app")
         new_session = db.create_session(app_name)
         result = {
@@ -114,14 +145,19 @@ def handle_toggle(app_name: str) -> dict:
             "opened_app": app_name,
             "session_id": new_session["id"],
         }
+        log_entry["action"] = f"switched({active['app']}->{app_name})"
     else:
-        # No active session -> open
         new_session = db.create_session(app_name)
         result = {
             "action": "opened",
             "app": app_name,
             "session_id": new_session["id"],
         }
+        log_entry["action"] = "opened"
+
+    _toggle_log.append(log_entry)
+    if len(_toggle_log) > _TOGGLE_LOG_MAX:
+        _toggle_log.pop(0)
 
     # Always record the event
     db.insert_event("app_toggle", value=app_name)

@@ -87,6 +87,23 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "healthy"})
 
 
+@mcp.custom_route("/api/debug/togglelog", methods=["GET"])
+async def toggle_log(request: Request) -> HTMLResponse:
+    """Plain text debug log of recent toggle events."""
+    from src.models import get_toggle_log
+    log = get_toggle_log()
+    lines = ["=== Toggle Debug Log (last 200) ===", ""]
+    for entry in log:
+        e = {k: v for k, v in entry.items() if k != "_utc"}
+        guard_info = f" BLOCKED({e['guard_ms']}ms)" if e.get("fast_guard") else ""
+        since_last = f" +{e['last_toggle_ms']}ms" if e.get("last_toggle_ms") is not None else " (first)"
+        active = f" active={e['active_before']}" if e.get("active_before") else " active=none"
+        lines.append(f"{e['time']} | {e['app']:20s} | {e['action']:30s}{active}{since_last}{guard_info}")
+    lines.append("")
+    lines.append(f"Total entries: {len(log)}")
+    return HTMLResponse("<pre>" + "\n".join(lines) + "</pre>", headers={"Content-Type": "text/html; charset=utf-8"})
+
+
 # --- Core toggle (iPhone shortcut hits this) ---
 
 @mcp.custom_route("/api/screentime/toggle/{app_name}", methods=["GET"])
