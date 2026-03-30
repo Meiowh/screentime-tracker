@@ -105,14 +105,28 @@ def handle_toggle(app_name: str) -> dict:
     # Clean up stale sessions first
     auto_close_stale_sessions()
 
-    # Fast-switch guard
+    # Same-app duplicate guard: ignore if same app toggled within 0.5s
+    if _toggle_log:
+        last = _toggle_log[-1]
+        if last.get("app") == app_name and last.get("_utc"):
+            ms_since_last = (now_utc - last["_utc"]).total_seconds()
+            if ms_since_last < 0.5:
+                log_entry["action"] = "ignored(duplicate)"
+                log_entry["guard_ms"] = round(ms_since_last * 1000)
+                _toggle_log.append(log_entry)
+                if len(_toggle_log) > _TOGGLE_LOG_MAX:
+                    _toggle_log.pop(0)
+                db.insert_event("app_toggle", value=app_name)
+                return {"action": "ignored", "app": app_name, "reason": "duplicate_guard", "ms_since_last": round(ms_since_last * 1000)}
+
+    # Fast-switch guard: ignore if this app was closed within 1.3s
     last_closed = db.get_last_closed_session_for_app(app_name)
     if last_closed and last_closed.get("end_ts"):
         closed_at = last_closed["end_ts"]
         if closed_at.tzinfo is None:
             closed_at = closed_at.replace(tzinfo=tz.utc)
         seconds_since_close = (now_utc - closed_at).total_seconds()
-        if seconds_since_close < 3:
+        if seconds_since_close < 1.3:
             log_entry["fast_guard"] = True
             log_entry["guard_ms"] = round(seconds_since_close * 1000)
             log_entry["action"] = "ignored"
