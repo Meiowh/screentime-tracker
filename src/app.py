@@ -456,6 +456,17 @@ def daily_report() -> str:
 
 
 @mcp.tool()
+def get_day_screentime(date: str) -> str:
+    """Get screen time summary for a specific date.
+    Use this to check yesterday's screen time, or any past date.
+
+    Args:
+        date: Date in YYYY-MM-DD format, e.g. "2026-03-29" for yesterday
+    """
+    return json.dumps(models.get_day_summary(date), ensure_ascii=False, indent=2, default=str)
+
+
+@mcp.tool()
 def compare_days(date1: str, date2: str) -> str:
     """Compare screen time between two dates.
 
