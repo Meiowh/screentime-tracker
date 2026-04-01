@@ -210,26 +210,40 @@ def delete_session(session_id: int):
 
 
 def get_sessions_today(tz_name: str):
-    """All sessions that started today in the given timezone."""
+    """All sessions that overlap with today in the given timezone.
+    Includes sessions that started yesterday but ended today (cross-midnight)."""
     with get_cursor() as cur:
         cur.execute(
             """SELECT * FROM sessions
-             WHERE start_ts >= date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s
+             WHERE (
+               -- Started today
+               start_ts >= date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s
+               -- OR started before today but ended today or still active (cross-midnight)
+               OR (start_ts < date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s
+                   AND (end_ts IS NULL OR end_ts >= date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s))
+             )
              ORDER BY start_ts""",
-            (tz_name, tz_name),
+            (tz_name, tz_name, tz_name, tz_name, tz_name, tz_name),
         )
         return [dict(r) for r in cur.fetchall()]
 
 
 def get_sessions_for_date(date_str: str, tz_name: str):
-    """All sessions that started on a specific date (YYYY-MM-DD) in the given timezone."""
+    """All sessions that overlap with a specific date (YYYY-MM-DD) in the given timezone.
+    Includes cross-midnight sessions from the previous day."""
     with get_cursor() as cur:
         cur.execute(
             """SELECT * FROM sessions
-             WHERE start_ts >= (%s::date AT TIME ZONE %s)
-               AND start_ts < ((%s::date + INTERVAL '1 day') AT TIME ZONE %s)
+             WHERE (
+               -- Started on this date
+               (start_ts >= (%s::date AT TIME ZONE %s)
+                AND start_ts < ((%s::date + INTERVAL '1 day') AT TIME ZONE %s))
+               -- OR started before this date but ended on this date or later
+               OR (start_ts < (%s::date AT TIME ZONE %s)
+                   AND (end_ts IS NULL OR end_ts >= (%s::date AT TIME ZONE %s)))
+             )
              ORDER BY start_ts""",
-            (date_str, tz_name, date_str, tz_name),
+            (date_str, tz_name, date_str, tz_name, date_str, tz_name, date_str, tz_name),
         )
         return [dict(r) for r in cur.fetchall()]
 

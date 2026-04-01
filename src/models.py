@@ -257,8 +257,10 @@ def force_close_all() -> dict:
 # ---------------------------------------------------------------------------
 
 def calculate_today_summary() -> dict:
-    """Aggregate today's sessions into a summary."""
+    """Aggregate today's sessions into a summary. Cross-midnight sessions are
+    clipped so only today's portion (from 00:00 local) counts."""
     now = _now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     sessions = db.get_sessions_today(_tz_name())
 
     apps: dict[str, dict] = {}
@@ -266,11 +268,29 @@ def calculate_today_summary() -> dict:
         app = s["app"]
         if app not in apps:
             apps[app] = {"open_count": 0, "total_seconds": 0, "status": "closed", "current_session_seconds": 0}
-        apps[app]["open_count"] += 1
-        dur = _session_duration_seconds(s)
+
+        # Determine effective start (clip to today 00:00 if session started yesterday)
+        local_start = _to_local(s["start_ts"])
+        effective_start = max(local_start, today_start)
+
+        # Determine effective end
+        if s["end_ts"] is None:
+            effective_end = now
+            apps[app]["status"] = "active"
+        else:
+            effective_end = _to_local(s["end_ts"])
+
+        dur = max(0, int((effective_end - effective_start).total_seconds()))
+
+        # Only count as an "open" if the session started today
+        if local_start >= today_start:
+            apps[app]["open_count"] += 1
+        else:
+            # Cross-midnight session: count as 1 open for today's portion
+            apps[app]["open_count"] += 1
+
         apps[app]["total_seconds"] += dur
         if s["end_ts"] is None:
-            apps[app]["status"] = "active"
             apps[app]["current_session_seconds"] = dur
 
     total_seconds = sum(a["total_seconds"] for a in apps.values())
@@ -804,14 +824,23 @@ def get_day_summary(date_str: str) -> dict:
     apps: dict[str, int] = {}
     hourly: dict[int, dict] = {h: {"total_seconds": 0, "apps": {}} for h in range(24)}
 
+    target_date = datetime.strptime(date_str, "%Y-%m-%d")
+    day_start = target_date.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=_tz())
+    day_end = day_start + timedelta(days=1)
+
     for s in sessions:
         app = s["app"]
-        dur = _session_duration_seconds(s)
-        apps[app] = apps.get(app, 0) + dur
 
-        # Distribute seconds across hours
+        # Clip to day boundaries for cross-midnight sessions
         start = _to_local(s["start_ts"])
         end = _to_local(s["end_ts"]) if s["end_ts"] else now
+        start = max(start, day_start)
+        end = min(end, day_end)
+
+        dur = max(0, int((end - start).total_seconds()))
+        apps[app] = apps.get(app, 0) + dur
+
+        # Distribute seconds across hours (clipped)
         current = start
         while current < end:
             h = current.hour
