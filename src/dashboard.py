@@ -1807,12 +1807,12 @@ async function loadHistory(type){
           continue;
         }
 
-        const startTime=pair.start_time||'';
-        const endTime=pair.end_time||'';
+        const startTime=pair.start_time||pair.left_time||'';
+        const endTime=pair.end_time||pair.arrived_time||'';
         const startShort=startTime?startTime.split(' ').pop().slice(0,5):'?';
         let endShort='';
         let durText='';
-        const pairId=pair.start_id||pair.id||0;
+        const pairId=pair.start_id||pair.left_id||pair.id||0;
 
         if(pair.ongoing){
           // Calculate ongoing duration
