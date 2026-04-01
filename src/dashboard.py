@@ -1916,7 +1916,7 @@ function hideHourlyTip(){
 }
 
 // ============ Calendar ============
-let calYear=2026, calMonth=3;
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth()+1;
 let calMonthData=null;
 
 function calendarPrevMonth(){

@@ -275,14 +275,20 @@ def get_sessions_for_month(year: int, month: int, tz_name: str):
 
 
 def get_sessions_today_et(tz_name: str):
-    """All sessions that started today in the given timezone (filtered by local date)."""
+    """All sessions that overlap with today in the given timezone (includes cross-midnight)."""
     with get_cursor() as cur:
         cur.execute(
             """SELECT * FROM sessions
-             WHERE start_ts >= date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s
-               AND start_ts < (date_trunc('day', NOW() AT TIME ZONE %s) + INTERVAL '1 day') AT TIME ZONE %s
+             WHERE (
+               -- Started today
+               (start_ts >= date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s
+                AND start_ts < (date_trunc('day', NOW() AT TIME ZONE %s) + INTERVAL '1 day') AT TIME ZONE %s)
+               -- OR cross-midnight: started yesterday but ended today or still active
+               OR (start_ts < date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s
+                   AND (end_ts IS NULL OR end_ts >= date_trunc('day', NOW() AT TIME ZONE %s) AT TIME ZONE %s))
+             )
              ORDER BY start_ts DESC""",
-            (tz_name, tz_name, tz_name, tz_name),
+            (tz_name, tz_name, tz_name, tz_name, tz_name, tz_name, tz_name, tz_name),
         )
         return [dict(r) for r in cur.fetchall()]
 
