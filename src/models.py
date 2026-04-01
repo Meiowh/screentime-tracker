@@ -488,10 +488,14 @@ def get_hourly_distribution() -> dict:
     # Per-app breakdown: iterate sessions, distribute seconds to hours
     sessions = db.get_sessions_today(_tz_name())
     now = _now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     for s in sessions:
         app = s["app"]
         start = _to_local(s["start_ts"])
         end = _to_local(s["end_ts"]) if s["end_ts"] else now
+
+        # Clip to today's boundaries for cross-midnight sessions
+        start = max(start, today_start)
 
         # Walk through each hour the session spans
         current = start
