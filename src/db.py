@@ -331,9 +331,9 @@ def get_sessions_in_hour_range(start_hour: int, end_hour: int, tz_name: str, day
 
 
 def get_last_event_time():
-    """Timestamp of the most recent event."""
+    """Timestamp of the most recent event (excluding observation-only app_open/app_close)."""
     with get_cursor() as cur:
-        cur.execute("SELECT MAX(ts) as last_ts FROM events")
+        cur.execute("SELECT MAX(ts) as last_ts FROM events WHERE type NOT IN ('app_open', 'app_close')")
         row = cur.fetchone()
         return row["last_ts"] if row else None
 

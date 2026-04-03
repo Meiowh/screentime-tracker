@@ -113,6 +113,136 @@ async def toggle(request: Request) -> JSONResponse:
     return JSONResponse(result)
 
 
+# --- Open/Close observation endpoints (parallel data collection, no logic changes) ---
+
+@mcp.custom_route("/api/screentime/open/{app_name}", methods=["GET"])
+async def open_app(request: Request) -> JSONResponse:
+    app_name = request.path_params["app_name"]
+    from src.db import insert_event
+    ev = insert_event("app_open", value=app_name)
+    return JSONResponse({"event": "app_open", "app": app_name, "id": ev["id"], "ts": str(ev["ts"])})
+
+
+@mcp.custom_route("/api/screentime/close/{app_name}", methods=["GET"])
+async def close_app(request: Request) -> JSONResponse:
+    app_name = request.path_params["app_name"]
+    from src.db import insert_event
+    ev = insert_event("app_close", value=app_name)
+    return JSONResponse({"event": "app_close", "app": app_name, "id": ev["id"], "ts": str(ev["ts"])})
+
+
+# --- Comparison page: toggle vs open/close ---
+
+@mcp.custom_route("/api/debug/compare", methods=["GET"])
+async def compare_signals(request: Request) -> HTMLResponse:
+    """Compare toggle events vs open/close events to find discrepancies."""
+    from src.db import get_cursor
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT type, value, ts
+            FROM events
+            WHERE type IN ('app_toggle', 'app_open', 'app_close')
+              AND ts >= NOW() - INTERVAL '3 days'
+            ORDER BY ts
+        """)
+        rows = [dict(r) for r in cur.fetchall()]
+
+    # Filter to only apps that have open/close data
+    oc_apps = set(r["value"] for r in rows if r["type"] in ("app_open", "app_close"))
+
+    lines = [
+        "=== Toggle vs Open/Close 对比 (最近3天) ===",
+        f"有 open/close 数据的 app: {', '.join(sorted(oc_apps)) if oc_apps else '无'}",
+        "",
+        "时间                     | 类型        | App                  | 备注",
+        "-------------------------|-------------|----------------------|------",
+    ]
+
+    # Build timeline for comparison
+    prev_toggle = {}  # app -> last toggle timestamp
+    prev_oc = {}      # app -> last open/close timestamp + type
+
+    for r in rows:
+        ts = r["ts"].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] if r["ts"] else "?"
+        app = r["value"] or "?"
+        etype = r["type"]
+
+        note = ""
+
+        if etype == "app_toggle":
+            # Check if there's a matching open/close nearby
+            if app in oc_apps:
+                tag = "[toggle] "
+                # Look for nearby open/close within 2 seconds
+                matched = False
+                for r2 in rows:
+                    if r2["type"] in ("app_open", "app_close") and r2["value"] == app:
+                        diff = abs((r["ts"] - r2["ts"]).total_seconds())
+                        if diff < 2:
+                            matched = True
+                            break
+                if not matched:
+                    note = "⚠ toggle 无对应 open/close"
+                else:
+                    note = "✓"
+            else:
+                tag = "[toggle] "
+                note = "(无对比数据)"
+
+            lines.append(f"{ts} | {tag:11s} | {app:20s} | {note}")
+
+        elif etype == "app_open":
+            tag = "[open]   "
+            # Check for matching toggle nearby
+            matched = False
+            for r2 in rows:
+                if r2["type"] == "app_toggle" and r2["value"] == app:
+                    diff = abs((r["ts"] - r2["ts"]).total_seconds())
+                    if diff < 2:
+                        matched = True
+                        break
+            if not matched:
+                note = "⚠ open 无对应 toggle（自动化漏报？）"
+            else:
+                note = "✓"
+            lines.append(f"{ts} | {tag:11s} | {app:20s} | {note}")
+
+        elif etype == "app_close":
+            tag = "[close]  "
+            matched = False
+            for r2 in rows:
+                if r2["type"] == "app_toggle" and r2["value"] == app:
+                    diff = abs((r["ts"] - r2["ts"]).total_seconds())
+                    if diff < 2:
+                        matched = True
+                        break
+            if not matched:
+                note = "⚠ close 无对应 toggle（toggle 漏了？）"
+            else:
+                note = "✓"
+            lines.append(f"{ts} | {tag:11s} | {app:20s} | {note}")
+
+    # Summary
+    toggles_for_oc_apps = [r for r in rows if r["type"] == "app_toggle" and r["value"] in oc_apps]
+    opens = [r for r in rows if r["type"] == "app_open"]
+    closes = [r for r in rows if r["type"] == "app_close"]
+
+    lines.append("")
+    lines.append("=== 统计 ===")
+    lines.append(f"对比 app 的 toggle 总数: {len(toggles_for_oc_apps)}")
+    lines.append(f"open 信号总数: {len(opens)}")
+    lines.append(f"close 信号总数: {len(closes)}")
+    lines.append(f"open + close 总数: {len(opens) + len(closes)}")
+    lines.append("")
+    lines.append("如果 toggle 数 ≈ open+close → toggle 没漏，问题在逻辑判断")
+    lines.append("如果 toggle 数 < open+close → toggle 有信号丢失")
+    lines.append("如果 open 无对应 toggle → 自动化发了 open 但 toggle 没到（网络问题？）")
+    lines.append("如果 toggle 无对应 open/close → 自动化没发 open/close（iOS 漏报）")
+
+    return HTMLResponse("<pre style='font-size:13px;line-height:1.5'>" + "\n".join(lines) + "</pre>",
+                       headers={"Content-Type": "text/html; charset=utf-8"})
+
+
 # --- Charging & location history (must be before wildcard /api/event/{event_type}) ---
 
 @mcp.custom_route("/api/history/charging", methods=["GET"])
