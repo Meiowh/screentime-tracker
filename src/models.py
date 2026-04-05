@@ -390,9 +390,14 @@ def get_all_nighter_info() -> dict:
     continuous = False
     last_end = None
 
+    today_date = now.date()
     for s in sessions:
         local_start = _to_local(s["start_ts"])
-        if local_start.hour >= 4 or (s["end_ts"] is None and now.hour >= 4):
+        local_end = _to_local(s["end_ts"]) if s["end_ts"] else now
+        # Only count if session was active during 4-8 AM window TODAY
+        if local_start.date() == today_date and 4 <= local_start.hour < 8:
+            past_4am = True
+        elif local_end.date() == today_date and local_start.hour < 4 and local_end.hour >= 4:
             past_4am = True
         # Check for gaps > 30 min (would indicate a break)
         if last_end:
